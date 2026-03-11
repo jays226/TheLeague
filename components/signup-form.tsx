@@ -1,0 +1,162 @@
+"use client";
+
+import { useState, useTransition } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+const initialState = {
+  teamName: "",
+  playerOneName: "",
+  playerOneEmail: "",
+  playerTwoName: "",
+  playerTwoEmail: "",
+  password: ""
+};
+
+export function SignupForm() {
+  const [form, setForm] = useState(initialState);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function updateField(name: keyof typeof initialState, value: string) {
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    startTransition(async () => {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(form)
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        redirectUrl?: string;
+      };
+
+      if (!response.ok) {
+        setError(data.error || "Something failed while creating your checkout session.");
+        return;
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      setError("Something failed while creating your team session.");
+    });
+  }
+
+  return (
+    <Card className="p-6 sm:p-8">
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="teamName">
+            Team name
+          </label>
+          <Input
+            id="teamName"
+            placeholder="Dink Responsibly"
+            value={form.teamName}
+            onChange={(event) => updateField("teamName", event.target.value)}
+            required
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="playerOneName">
+              Player one
+            </label>
+            <Input
+              id="playerOneName"
+              placeholder="First and last name"
+              value={form.playerOneName}
+              onChange={(event) => updateField("playerOneName", event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="playerOneEmail">
+              UVA email
+            </label>
+            <Input
+              id="playerOneEmail"
+              type="email"
+              placeholder="abc2de@virginia.edu"
+              value={form.playerOneEmail}
+              onChange={(event) => updateField("playerOneEmail", event.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="playerTwoName">
+              Player two
+            </label>
+            <Input
+              id="playerTwoName"
+              placeholder="First and last name"
+              value={form.playerTwoName}
+              onChange={(event) => updateField("playerTwoName", event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="playerTwoEmail">
+              UVA email
+            </label>
+            <Input
+              id="playerTwoEmail"
+              type="email"
+              placeholder="xyz9jk@virginia.edu"
+              value={form.playerTwoEmail}
+              onChange={(event) => updateField("playerTwoEmail", event.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="password">
+            Team password
+          </label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Create a password for returning login"
+            value={form.password}
+            onChange={(event) => updateField("password", event.target.value)}
+            required
+          />
+        </div>
+
+        <div className="rounded-2xl border border-border bg-secondary/80 p-4 text-sm text-muted-foreground">
+          Register your team, then pay the $40 fee through Venmo at $20 per player. Your payment
+          and requested timeslot will stay pending until an admin manually approves them.
+        </div>
+
+        {error ? (
+          <div className="rounded-2xl border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] px-4 py-3 text-sm text-foreground">
+            {error}
+          </div>
+        ) : null}
+
+        <Button className="w-full" disabled={isPending} type="submit">
+          {isPending ? "Setting up your team..." : "Enter the league dashboard"}
+        </Button>
+      </form>
+    </Card>
+  );
+}
