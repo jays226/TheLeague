@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 import { hashPassword } from "@/lib/auth";
 import { createTeam } from "@/lib/db";
@@ -47,6 +48,18 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    if (error instanceof ZodError) {
+      const flattened = error.flatten();
+
+      return NextResponse.json(
+        {
+          error: "Please fix the highlighted fields and try again.",
+          fieldErrors: flattened.fieldErrors
+        },
+        { status: 400 }
+      );
+    }
+
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 400 });
   }

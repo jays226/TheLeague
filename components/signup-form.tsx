@@ -18,6 +18,9 @@ const initialState = {
 export function SignupForm() {
   const [form, setForm] = useState(initialState);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof initialState, string>>>(
+    {}
+  );
   const [isPending, startTransition] = useTransition();
 
   function updateField(name: keyof typeof initialState, value: string) {
@@ -27,6 +30,7 @@ export function SignupForm() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
 
     startTransition(async () => {
       const response = await fetch("/api/register", {
@@ -39,10 +43,16 @@ export function SignupForm() {
 
       const data = (await response.json()) as {
         error?: string;
+        fieldErrors?: Partial<Record<keyof typeof initialState, string[]>>;
         redirectUrl?: string;
       };
 
       if (!response.ok) {
+        setFieldErrors(
+          Object.fromEntries(
+            Object.entries(data.fieldErrors ?? {}).map(([key, value]) => [key, value?.[0] ?? ""])
+          ) as Partial<Record<keyof typeof initialState, string>>
+        );
         setError(data.error || "Something failed while creating your checkout session.");
         return;
       }
@@ -70,6 +80,9 @@ export function SignupForm() {
             onChange={(event) => updateField("teamName", event.target.value)}
             required
           />
+          {fieldErrors.teamName ? (
+            <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.teamName}</p>
+          ) : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -84,6 +97,9 @@ export function SignupForm() {
               onChange={(event) => updateField("playerOneName", event.target.value)}
               required
             />
+            {fieldErrors.playerOneName ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerOneName}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground" htmlFor="playerOneEmail">
@@ -97,6 +113,9 @@ export function SignupForm() {
               onChange={(event) => updateField("playerOneEmail", event.target.value)}
               required
             />
+            {fieldErrors.playerOneEmail ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerOneEmail}</p>
+            ) : null}
           </div>
         </div>
 
@@ -112,6 +131,9 @@ export function SignupForm() {
               onChange={(event) => updateField("playerTwoName", event.target.value)}
               required
             />
+            {fieldErrors.playerTwoName ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerTwoName}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground" htmlFor="playerTwoEmail">
@@ -125,6 +147,9 @@ export function SignupForm() {
               onChange={(event) => updateField("playerTwoEmail", event.target.value)}
               required
             />
+            {fieldErrors.playerTwoEmail ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerTwoEmail}</p>
+            ) : null}
           </div>
         </div>
 
@@ -140,6 +165,9 @@ export function SignupForm() {
             onChange={(event) => updateField("password", event.target.value)}
             required
           />
+          {fieldErrors.password ? (
+            <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.password}</p>
+          ) : null}
         </div>
 
         <div className="rounded-2xl border border-border bg-secondary/80 p-4 text-sm text-muted-foreground">
