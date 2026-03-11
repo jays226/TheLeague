@@ -1,55 +1,54 @@
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
+import "server-only";
 
-import Database from "better-sqlite3";
+import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 import { env } from "@/lib/env";
 import { recurringSlots } from "@/lib/slots";
 
-const dbFile = path.resolve(process.cwd(), env.dbPath);
-fs.mkdirSync(path.dirname(dbFile), { recursive: true });
+if (!env.databaseUrl) {
+  throw new Error("Missing DATABASE_URL. Supabase/Postgres is required for this deployment.");
+}
 
-const db = new Database(dbFile, {
-  timeout: 5000
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __leaguePool: Pool | undefined;
+}
 
-db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
+const pool =
+  global.__leaguePool ||
+  new Pool({
+    connectionString: env.databaseUrl,
+    ssl: env.databaseUrl.includes("localhost")
+      ? false
+      : {
+          rejectUnauthorized: false
+        }
+  });
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS teams (
-    id TEXT PRIMARY KEY,
-    team_name TEXT NOT NULL,
-    player_one_name TEXT NOT NULL,
-    player_one_email TEXT NOT NULL,
-    player_two_name TEXT NOT NULL,
-    player_two_email TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    verification_status TEXT NOT NULL,
-    payment_status TEXT NOT NULL DEFAULT 'pending',
-    amount_cents INTEGER NOT NULL DEFAULT 4000,
-    access_token TEXT,
-    created_at TEXT NOT NULL,
-    paid_at TEXT
-  );
+if (process.env.NODE_ENV !== "production") {
+  global.__leaguePool = pool;
+}
 
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_team_name
-  ON teams(team_name);
+async function query<T extends QueryResultRow>(text: string, values: unknown[] = []) {
+  const result = await pool.query<T>(text, values);
+  return result.rows;
+}
 
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_access_token
-  ON teams(access_token);
+async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>) {
+  const client = await pool.connect();
 
-  CREATE TABLE IF NOT EXISTS reservations (
-    id TEXT PRIMARY KEY,
-    team_id TEXT NOT NULL,
-    slot_id TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    FOREIGN KEY(team_id) REFERENCES teams(id)
-  );
-`);
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
 export type TeamRecord = {
   id: string;
@@ -59,7 +58,7 @@ export type TeamRecord = {
   player_two_name: string;
   player_two_email: string;
   password_hash: string;
-  verification_status: string;
+  verification_status: unknown;
   payment_status: "pending" | "approved";
   amount_cents: number;
   access_token: string | null;
@@ -112,8 +111,26 @@ export type AdminTeamRow = TeamRecord & {
   active_reservation_status: ReservationRecord["status"] | null;
 };
 
-export function createTeam(input: CreateTeamInput) {
-  db.prepare(
+function normalizeTeam(row: TeamRecord): TeamRecord {
+  return {
+    ...row,
+    amount_cents: Number(row.amount_cents)
+  };
+}
+
+function hydrateReservation<T extends ReservationRecord>(reservation: T) {
+  const slot = recurringSlots.find((entry) => entry.id === reservation.slot_id);
+
+  return {
+    ...reservation,
+    day_label: slot?.dayLabel,
+    time_label: slot?.timeLabel,
+    capacity: slot?.capacity
+  };
+}
+
+export async function createTeam(input: CreateTeamInput) {
+  const rows = await query<TeamRecord>(
     `
       INSERT INTO teams (
         id,
@@ -129,101 +146,93 @@ export function createTeam(input: CreateTeamInput) {
         access_token,
         created_at
       ) VALUES (
-        @id,
-        @team_name,
-        @player_one_name,
-        @player_one_email,
-        @player_two_name,
-        @player_two_email,
-        @password_hash,
-        @verification_status,
-        'pending',
-        4000,
-        @access_token,
-        @created_at
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', 4000, $9, now()
       )
-    `
-  ).run({
-    id: input.id,
-    team_name: input.teamName,
-    player_one_name: input.playerOneName,
-    player_one_email: input.playerOneEmail,
-    player_two_name: input.playerTwoName,
-    player_two_email: input.playerTwoEmail,
-    password_hash: input.passwordHash,
-    verification_status: input.verificationStatus,
-    access_token: input.accessToken,
-    created_at: new Date().toISOString()
-  });
+      RETURNING *
+    `,
+    [
+      input.id,
+      input.teamName,
+      input.playerOneName,
+      input.playerOneEmail,
+      input.playerTwoName,
+      input.playerTwoEmail,
+      input.passwordHash,
+      input.verificationStatus,
+      input.accessToken
+    ]
+  );
 
-  return getTeamById(input.id);
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
-export function getTeamById(id: string) {
-  return db.prepare("SELECT * FROM teams WHERE id = ?").get(id) as TeamRecord | undefined;
+export async function getTeamById(id: string) {
+  const rows = await query<TeamRecord>("SELECT * FROM teams WHERE id = $1 LIMIT 1", [id]);
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
-export function getTeamByName(teamName: string) {
-  return db
-    .prepare("SELECT * FROM teams WHERE lower(team_name) = lower(?)")
-    .get(teamName) as TeamRecord | undefined;
+export async function getTeamByName(teamName: string) {
+  const rows = await query<TeamRecord>(
+    "SELECT * FROM teams WHERE lower(team_name) = lower($1) LIMIT 1",
+    [teamName]
+  );
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
-export function getTeamByAccessToken(accessToken: string) {
-  return db
-    .prepare("SELECT * FROM teams WHERE access_token = ?")
-    .get(accessToken) as TeamRecord | undefined;
+export async function getTeamByAccessToken(accessToken: string) {
+  const rows = await query<TeamRecord>(
+    "SELECT * FROM teams WHERE access_token = $1 LIMIT 1",
+    [accessToken]
+  );
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
-export function getExistingConflict(input: {
+export async function getExistingConflict(input: {
   teamName: string;
   playerOneEmail: string;
   playerTwoEmail: string;
 }) {
-  return db
-    .prepare(
-      `
-        SELECT *
-        FROM teams
-        WHERE team_name = ?
-          OR player_one_email IN (?, ?)
-          OR player_two_email IN (?, ?)
-          OR player_one_email = ?
-          OR player_two_email = ?
-        LIMIT 1
-      `
-    )
-    .get(
-      input.teamName,
-      input.playerOneEmail,
-      input.playerTwoEmail,
-      input.playerOneEmail,
-      input.playerTwoEmail,
-      input.playerTwoEmail,
-      input.playerOneEmail
-    ) as TeamRecord | undefined;
+  const rows = await query<TeamRecord>(
+    `
+      SELECT *
+      FROM teams
+      WHERE team_name = $1
+        OR player_one_email IN ($2, $3)
+        OR player_two_email IN ($2, $3)
+        OR player_one_email = $3
+        OR player_two_email = $2
+      LIMIT 1
+    `,
+    [input.teamName, input.playerOneEmail, input.playerTwoEmail]
+  );
+
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
-export function listTeams() {
-  return db.prepare("SELECT * FROM teams ORDER BY created_at DESC").all() as TeamRecord[];
+export async function listTeams() {
+  const rows = await query<TeamRecord>("SELECT * FROM teams ORDER BY created_at DESC");
+  return rows.map(normalizeTeam);
 }
 
-export function listTeamsWithReservations() {
-  const teams = listTeams();
-  const activeReservations = db
-    .prepare(
-      `
-        SELECT *
-        FROM reservations
-        WHERE status IN ('pending', 'approved')
-        ORDER BY updated_at DESC
-      `
-    )
-    .all() as ReservationRecord[];
+export async function listTeamsWithReservations() {
+  const teams = await listTeams();
+  const reservations = await query<ReservationRecord>(
+    `
+      SELECT *
+      FROM reservations
+      WHERE status IN ('pending', 'approved')
+      ORDER BY
+        CASE status
+          WHEN 'pending' THEN 0
+          ELSE 1
+        END,
+        updated_at DESC
+    `
+  );
 
   const reservationMap = new Map<string, ReservationRecord>();
 
-  for (const reservation of activeReservations) {
+  for (const reservation of reservations) {
     if (!reservationMap.has(reservation.team_id)) {
       reservationMap.set(reservation.team_id, reservation);
     }
@@ -231,7 +240,7 @@ export function listTeamsWithReservations() {
 
   return teams.map((team) => {
     const reservation = reservationMap.get(team.id);
-    const slot = reservation ? getSlotById(reservation.slot_id) : undefined;
+    const slot = recurringSlots.find((entry) => entry.id === reservation?.slot_id);
 
     return {
       ...team,
@@ -243,33 +252,19 @@ export function listTeamsWithReservations() {
   });
 }
 
-export function listApprovedTeamsForSlot(slotId: string) {
-  return db
-    .prepare(
-      `
-        SELECT t.team_name
-        FROM reservations r
-        JOIN teams t ON t.id = r.team_id
-        WHERE r.slot_id = ?
-          AND r.status = 'approved'
-        ORDER BY t.team_name ASC
-      `
-    )
-    .all(slotId) as Array<{ team_name: string }>;
-}
-
-export function approveTeamPayment(teamId: string) {
-  db.prepare(
+export async function approveTeamPayment(teamId: string) {
+  await query(
     `
       UPDATE teams
       SET payment_status = 'approved',
-          paid_at = ?
-      WHERE id = ?
-    `
-  ).run(new Date().toISOString(), teamId);
+          paid_at = COALESCE(paid_at, now())
+      WHERE id = $1
+    `,
+    [teamId]
+  );
 }
 
-export function createTeamByAdmin(input: {
+export async function createTeamByAdmin(input: {
   id: string;
   teamName: string;
   playerOneName: string;
@@ -281,7 +276,7 @@ export function createTeamByAdmin(input: {
   amountCents?: number;
   accessToken: string;
 }) {
-  db.prepare(
+  await query(
     `
       INSERT INTO teams (
         id,
@@ -298,38 +293,26 @@ export function createTeamByAdmin(input: {
         created_at,
         paid_at
       ) VALUES (
-        @id,
-        @team_name,
-        @player_one_name,
-        @player_one_email,
-        @player_two_name,
-        @player_two_email,
-        @password_hash,
-        '[]',
-        @payment_status,
-        @amount_cents,
-        @access_token,
-        @created_at,
-        @paid_at
+        $1, $2, $3, $4, $5, $6, $7, '[]'::jsonb, $8, $9, $10, now(),
+        CASE WHEN $8 = 'approved' THEN now() ELSE NULL END
       )
-    `
-  ).run({
-    id: input.id,
-    team_name: input.teamName,
-    player_one_name: input.playerOneName,
-    player_one_email: input.playerOneEmail,
-    player_two_name: input.playerTwoName,
-    player_two_email: input.playerTwoEmail,
-    password_hash: input.passwordHash,
-    payment_status: input.paymentStatus,
-    amount_cents: input.amountCents ?? 4000,
-    access_token: input.accessToken,
-    created_at: new Date().toISOString(),
-    paid_at: input.paymentStatus === "approved" ? new Date().toISOString() : null
-  });
+    `,
+    [
+      input.id,
+      input.teamName,
+      input.playerOneName,
+      input.playerOneEmail,
+      input.playerTwoName,
+      input.playerTwoEmail,
+      input.passwordHash,
+      input.paymentStatus,
+      input.amountCents ?? 4000,
+      input.accessToken
+    ]
+  );
 }
 
-export function updateTeamByAdmin(input: {
+export async function updateTeamByAdmin(input: {
   teamId: string;
   teamName: string;
   playerOneName: string;
@@ -339,70 +322,78 @@ export function updateTeamByAdmin(input: {
   paymentStatus: TeamRecord["payment_status"];
   passwordHash?: string;
 }) {
-  const currentTeam = getTeamById(input.teamId);
+  const currentTeam = await getTeamById(input.teamId);
 
   if (!currentTeam) {
     throw new Error("Team not found.");
   }
 
-  db.prepare(
+  await query(
     `
       UPDATE teams
       SET
-        team_name = @team_name,
-        player_one_name = @player_one_name,
-        player_one_email = @player_one_email,
-        player_two_name = @player_two_name,
-        player_two_email = @player_two_email,
-        password_hash = @password_hash,
-        payment_status = @payment_status,
-        paid_at = @paid_at
-      WHERE id = @team_id
-    `
-  ).run({
-    team_id: input.teamId,
-    team_name: input.teamName,
-    player_one_name: input.playerOneName,
-    player_one_email: input.playerOneEmail,
-    player_two_name: input.playerTwoName,
-    player_two_email: input.playerTwoEmail,
-    password_hash: input.passwordHash || currentTeam.password_hash,
-    payment_status: input.paymentStatus,
-    paid_at:
-      input.paymentStatus === "approved"
-        ? currentTeam.paid_at || new Date().toISOString()
-        : null
-  });
-}
-
-export function deleteTeamByAdmin(teamId: string) {
-  const transaction = db.transaction(() => {
-    db.prepare("DELETE FROM reservations WHERE team_id = ?").run(teamId);
-    db.prepare("DELETE FROM teams WHERE id = ?").run(teamId);
-  });
-
-  transaction();
-}
-
-export function listSlots() {
-  const approvedCounts = db
-    .prepare(
-      `
-        SELECT slot_id, COUNT(*) AS count
-        FROM reservations
-        WHERE status = 'approved'
-        GROUP BY slot_id
-      `
-    )
-    .all() as Array<{ slot_id: string; count: number }>;
-
-  const countMap = new Map(approvedCounts.map((row) => [row.slot_id, Number(row.count)]));
-  const teamMap = new Map(
-    recurringSlots.map((slot) => [
-      slot.id,
-      listApprovedTeamsForSlot(slot.id).map((team) => team.team_name)
-    ])
+        team_name = $2,
+        player_one_name = $3,
+        player_one_email = $4,
+        player_two_name = $5,
+        player_two_email = $6,
+        password_hash = $7,
+        payment_status = $8,
+        paid_at = CASE
+          WHEN $8 = 'approved' THEN COALESCE(paid_at, now())
+          ELSE NULL
+        END
+      WHERE id = $1
+    `,
+    [
+      input.teamId,
+      input.teamName,
+      input.playerOneName,
+      input.playerOneEmail,
+      input.playerTwoName,
+      input.playerTwoEmail,
+      input.passwordHash || currentTeam.password_hash,
+      input.paymentStatus
+    ]
   );
+}
+
+export async function deleteTeamByAdmin(teamId: string) {
+  await query("DELETE FROM teams WHERE id = $1", [teamId]);
+}
+
+export async function listApprovedTeamsForSlot(slotId: string) {
+  return query<{ team_name: string }>(
+    `
+      SELECT t.team_name
+      FROM reservations r
+      JOIN teams t ON t.id = r.team_id
+      WHERE r.slot_id = $1
+        AND r.status = 'approved'
+      ORDER BY t.team_name ASC
+    `,
+    [slotId]
+  );
+}
+
+export async function listSlots() {
+  const counts = await query<{ slot_id: string; count: string }>(
+    `
+      SELECT slot_id, COUNT(*)::text AS count
+      FROM reservations
+      WHERE status = 'approved'
+      GROUP BY slot_id
+    `
+  );
+
+  const countMap = new Map(counts.map((row) => [row.slot_id, Number(row.count)]));
+  const teamEntries = await Promise.all(
+    recurringSlots.map(async (slot) => ({
+      slotId: slot.id,
+      teams: (await listApprovedTeamsForSlot(slot.id)).map((team) => team.team_name)
+    }))
+  );
+  const teamMap = new Map(teamEntries.map((entry) => [entry.slotId, entry.teams]));
 
   return recurringSlots.map((slot) => {
     const reservedCount = countMap.get(slot.id) || 0;
@@ -419,7 +410,7 @@ export function listSlots() {
       available_spots: availableSpots,
       is_full: availableSpots <= 0 ? 1 : 0,
       teams: teamMap.get(slot.id) || []
-    };
+    } satisfies SlotRecord;
   });
 }
 
@@ -427,99 +418,87 @@ export function getSlotById(slotId: string) {
   return recurringSlots.find((slot) => slot.id === slotId);
 }
 
-export function getReservationById(id: string) {
-  return db.prepare("SELECT * FROM reservations WHERE id = ?").get(id) as
-    | ReservationRecord
-    | undefined;
+export async function getReservationById(id: string) {
+  const rows = await query<ReservationRecord>(
+    "SELECT * FROM reservations WHERE id = $1 LIMIT 1",
+    [id]
+  );
+  return rows[0];
 }
 
-function hydrateReservation<T extends ReservationRecord>(reservation: T) {
-  const slot = getSlotById(reservation.slot_id);
+export async function getActiveReservationForTeam(teamId: string) {
+  const rows = await query<ReservationRecord>(
+    `
+      SELECT *
+      FROM reservations
+      WHERE team_id = $1
+        AND status = 'approved'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `,
+    [teamId]
+  );
 
-  return {
-    ...reservation,
-    day_label: slot?.dayLabel,
-    time_label: slot?.timeLabel,
-    capacity: slot?.capacity
-  };
+  return rows[0] ? hydrateReservation(rows[0]) : undefined;
 }
 
-export function getActiveReservationForTeam(teamId: string) {
-  const reservation = db
-    .prepare(
-      `
-        SELECT *
-        FROM reservations
-        WHERE team_id = ?
-          AND status = 'approved'
-        ORDER BY updated_at DESC
-        LIMIT 1
-      `
-    )
-    .get(teamId) as ReservationRecord | undefined;
+export async function getPendingReservationForTeam(teamId: string) {
+  const rows = await query<ReservationRecord>(
+    `
+      SELECT *
+      FROM reservations
+      WHERE team_id = $1
+        AND status = 'pending'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `,
+    [teamId]
+  );
 
-  return reservation ? hydrateReservation(reservation) : undefined;
+  return rows[0] ? hydrateReservation(rows[0]) : undefined;
 }
 
-export function getPendingReservationForTeam(teamId: string) {
-  const reservation = db
-    .prepare(
-      `
-        SELECT *
-        FROM reservations
-        WHERE team_id = ?
-          AND status = 'pending'
-        ORDER BY updated_at DESC
-        LIMIT 1
-      `
-    )
-    .get(teamId) as ReservationRecord | undefined;
+export async function listReservationsForTeam(teamId: string) {
+  const rows = await query<ReservationRecord>(
+    `
+      SELECT *
+      FROM reservations
+      WHERE team_id = $1
+      ORDER BY
+        CASE status
+          WHEN 'approved' THEN 0
+          WHEN 'pending' THEN 1
+          ELSE 2
+        END,
+        updated_at DESC
+    `,
+    [teamId]
+  );
 
-  return reservation ? hydrateReservation(reservation) : undefined;
+  return rows.map(hydrateReservation);
 }
 
-export function listReservationsForTeam(teamId: string) {
-  const reservations = db
-    .prepare(
-      `
-        SELECT *
-        FROM reservations
-        WHERE team_id = ?
-        ORDER BY
-          CASE status
-            WHEN 'approved' THEN 0
-            WHEN 'pending' THEN 1
-            ELSE 2
-          END,
-          updated_at DESC
-      `
-    )
-    .all(teamId) as ReservationRecord[];
-
-  return reservations.map(hydrateReservation);
-}
-
-export function getReservationStats() {
+export async function getReservationStats() {
   const totalCapacity = recurringSlots.reduce((sum, slot) => sum + slot.capacity, 0);
-  const activeReservations = db
-    .prepare(
-      `
-        SELECT COUNT(*) AS count
-        FROM reservations
-        WHERE status = 'approved'
-      `
-    )
-    .get() as { count: number };
+  const rows = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM reservations
+      WHERE status = 'approved'
+    `
+  );
+
+  const totalReservations = Number(rows[0]?.count || 0);
 
   return {
     totalSlots: recurringSlots.length,
-    totalReservations: activeReservations.count,
-    availableSpots: totalCapacity - activeReservations.count
+    totalReservations,
+    availableSpots: totalCapacity - totalReservations
   };
 }
 
-export function reserveSlot(input: { id: string; teamId: string; slotId: string }) {
-  const team = getTeamById(input.teamId);
+export async function reserveSlot(input: { id: string; teamId: string; slotId: string }) {
+  const team = await getTeamById(input.teamId);
 
   if (!team || team.payment_status !== "approved") {
     throw new Error("Your team must be payment-approved before signing up for a slot.");
@@ -531,8 +510,8 @@ export function reserveSlot(input: { id: string; teamId: string; slotId: string 
     throw new Error("That slot is no longer available.");
   }
 
-  const currentReservation = getActiveReservationForTeam(input.teamId);
-  const pendingReservation = getPendingReservationForTeam(input.teamId);
+  const currentReservation = await getActiveReservationForTeam(input.teamId);
+  const pendingReservation = await getPendingReservationForTeam(input.teamId);
 
   if (currentReservation?.slot_id === input.slotId) {
     throw new Error("Your team is already signed up for that slot.");
@@ -542,24 +521,21 @@ export function reserveSlot(input: { id: string; teamId: string; slotId: string 
     throw new Error("Your team already has a pending change request.");
   }
 
-  const reservedCount = db
-    .prepare(
-      `
-        SELECT COUNT(*) AS count
-        FROM reservations
-        WHERE slot_id = ?
-          AND status = 'approved'
-      `
-    )
-    .get(input.slotId) as { count: number };
+  const countRows = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM reservations
+      WHERE slot_id = $1
+        AND status = 'approved'
+    `,
+    [input.slotId]
+  );
 
-  if (reservedCount.count >= slot.capacity) {
+  if (Number(countRows[0]?.count || 0) >= slot.capacity) {
     throw new Error("That slot is full.");
   }
 
-  const now = new Date().toISOString();
-
-  db.prepare(
+  await query(
     `
       INSERT INTO reservations (
         id,
@@ -568,63 +544,60 @@ export function reserveSlot(input: { id: string; teamId: string; slotId: string 
         status,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `
-  ).run(
-    input.id,
-    input.teamId,
-    input.slotId,
-    currentReservation ? "pending" : "approved",
-    now,
-    now
+      ) VALUES ($1, $2, $3, $4, now(), now())
+    `,
+    [input.id, input.teamId, input.slotId, currentReservation ? "pending" : "approved"]
   );
 }
 
-export function cancelActiveReservation(teamId: string) {
-  const pendingReservation = getPendingReservationForTeam(teamId);
-  const currentReservation = pendingReservation || getActiveReservationForTeam(teamId);
+export async function cancelActiveReservation(teamId: string) {
+  const pendingReservation = await getPendingReservationForTeam(teamId);
+  const currentReservation = pendingReservation || (await getActiveReservationForTeam(teamId));
 
   if (!currentReservation) {
     throw new Error("Your team does not have an active reservation.");
   }
 
-  db.prepare(
+  await query(
     `
       UPDATE reservations
       SET status = 'cancelled',
-          updated_at = ?
-      WHERE id = ?
-    `
-  ).run(new Date().toISOString(), currentReservation.id);
+          updated_at = now()
+      WHERE id = $1
+    `,
+    [currentReservation.id]
+  );
 }
 
-export function moveTeamReservation(teamId: string, slotId: string | null) {
-  const team = getTeamById(teamId);
+export async function moveTeamReservation(teamId: string, slotId: string | null) {
+  const team = await getTeamById(teamId);
 
   if (!team) {
     throw new Error("Team not found.");
   }
 
-  const currentReservation = getActiveReservationForTeam(teamId);
-  const pendingReservation = getPendingReservationForTeam(teamId);
+  const currentReservation = await getActiveReservationForTeam(teamId);
+  const pendingReservation = await getPendingReservationForTeam(teamId);
 
   if (!slotId) {
-    if (!currentReservation && !pendingReservation) {
-      return;
-    }
-
     if (pendingReservation) {
-      db.prepare(
+      await query(
         `
           UPDATE reservations
           SET status = 'cancelled',
-              updated_at = ?
-          WHERE id = ?
-        `
-      ).run(new Date().toISOString(), pendingReservation.id);
-    } else {
-      cancelActiveReservation(teamId);
+              updated_at = now()
+          WHERE id = $1
+        `,
+        [pendingReservation.id]
+      );
+      return;
     }
+
+    if (!currentReservation) {
+      return;
+    }
+
+    await cancelActiveReservation(teamId);
     return;
   }
 
@@ -638,36 +611,35 @@ export function moveTeamReservation(teamId: string, slotId: string | null) {
     return;
   }
 
-  const reservedCount = db
-    .prepare(
-      `
-        SELECT COUNT(*) AS count
-        FROM reservations
-        WHERE slot_id = ?
-          AND status = 'approved'
-          AND team_id != ?
-      `
-    )
-    .get(slotId, teamId) as { count: number };
+  const countRows = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM reservations
+      WHERE slot_id = $1
+        AND status = 'approved'
+        AND team_id != $2
+    `,
+    [slotId, teamId]
+  );
 
-  if (reservedCount.count >= slot.capacity) {
+  if (Number(countRows[0]?.count || 0) >= slot.capacity) {
     throw new Error("That destination slot is full.");
   }
 
-  const now = new Date().toISOString();
-  const transaction = db.transaction(() => {
+  await withTransaction(async (client) => {
     if (pendingReservation) {
-      db.prepare(
+      await client.query(
         `
           UPDATE reservations
           SET status = 'cancelled',
-              updated_at = ?
-          WHERE id = ?
-        `
-      ).run(now, pendingReservation.id);
+              updated_at = now()
+          WHERE id = $1
+        `,
+        [pendingReservation.id]
+      );
     }
 
-    db.prepare(
+    await client.query(
       `
         INSERT INTO reservations (
           id,
@@ -676,44 +648,39 @@ export function moveTeamReservation(teamId: string, slotId: string | null) {
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `
-    ).run(
-      cryptoRandomId(),
-      teamId,
-      slotId,
-      currentReservation ? "pending" : team.payment_status === "approved" ? "approved" : "pending",
-      now,
-      now
+        ) VALUES ($1, $2, $3, $4, now(), now())
+      `,
+      [
+        crypto.randomUUID(),
+        teamId,
+        slotId,
+        currentReservation ? "pending" : team.payment_status === "approved" ? "approved" : "pending"
+      ]
     );
   });
-
-  transaction();
 }
 
-export function listAllReservations() {
-  const reservations = db
-    .prepare(
-      `
-        SELECT r.*, t.team_name
-        FROM reservations r
-        JOIN teams t ON t.id = r.team_id
-        ORDER BY
-          CASE r.status
-            WHEN 'pending' THEN 0
-            WHEN 'approved' THEN 1
-            ELSE 2
-          END,
-          r.updated_at DESC
-      `
-    )
-    .all() as ReservationRecord[];
+export async function listAllReservations() {
+  const rows = await query<ReservationRecord & { team_name: string }>(
+    `
+      SELECT r.*, t.team_name
+      FROM reservations r
+      JOIN teams t ON t.id = r.team_id
+      ORDER BY
+        CASE r.status
+          WHEN 'pending' THEN 0
+          WHEN 'approved' THEN 1
+          ELSE 2
+        END,
+        r.updated_at DESC
+    `
+  );
 
-  return reservations.map(hydrateReservation);
+  return rows.map(hydrateReservation);
 }
 
-export function approveReservation(reservationId: string) {
-  const reservation = getReservationById(reservationId);
+export async function approveReservation(reservationId: string) {
+  const reservation = await getReservationById(reservationId);
 
   if (!reservation || reservation.status === "cancelled" || reservation.status === "rejected") {
     throw new Error("Reservation not found.");
@@ -725,60 +692,56 @@ export function approveReservation(reservationId: string) {
     throw new Error("Slot not found.");
   }
 
-  const reservedCount = db
-    .prepare(
-      `
-        SELECT COUNT(*) AS count
-        FROM reservations
-        WHERE slot_id = ?
-          AND status = 'approved'
-          AND id != ?
-      `
-    )
-    .get(reservation.slot_id, reservationId) as { count: number };
+  const countRows = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM reservations
+      WHERE slot_id = $1
+        AND status = 'approved'
+        AND id != $2
+    `,
+    [reservation.slot_id, reservationId]
+  );
 
-  if (reservedCount.count >= slot.capacity) {
+  if (Number(countRows[0]?.count || 0) >= slot.capacity) {
     throw new Error("This slot is already full.");
   }
 
-  const currentApproved = getActiveReservationForTeam(reservation.team_id);
-  const now = new Date().toISOString();
-  const transaction = db.transaction(() => {
+  const currentApproved = await getActiveReservationForTeam(reservation.team_id);
+
+  await withTransaction(async (client) => {
     if (currentApproved && currentApproved.id !== reservationId) {
-      db.prepare(
+      await client.query(
         `
           UPDATE reservations
           SET status = 'cancelled',
-              updated_at = ?
-          WHERE id = ?
-        `
-      ).run(now, currentApproved.id);
+              updated_at = now()
+          WHERE id = $1
+        `,
+        [currentApproved.id]
+      );
     }
 
-    db.prepare(
+    await client.query(
       `
         UPDATE reservations
         SET status = 'approved',
-            updated_at = ?
-        WHERE id = ?
-      `
-    ).run(now, reservationId);
+            updated_at = now()
+        WHERE id = $1
+      `,
+      [reservationId]
+    );
   });
-
-  transaction();
 }
 
-export function rejectReservation(reservationId: string) {
-  db.prepare(
+export async function rejectReservation(reservationId: string) {
+  await query(
     `
       UPDATE reservations
       SET status = 'rejected',
-          updated_at = ?
-      WHERE id = ?
-    `
-  ).run(new Date().toISOString(), reservationId);
-}
-
-function cryptoRandomId() {
-  return crypto.randomUUID();
+          updated_at = now()
+      WHERE id = $1
+    `,
+    [reservationId]
+  );
 }

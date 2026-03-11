@@ -8,14 +8,14 @@ Full-stack MVP for a UVA pickleball league signup funnel:
 - email verification before registration
 - Venmo-based $100 paywall with manual payment approval
 - password-protected admin portal for payments and timeslots
-- SQLite persistence for registrations
+- Supabase/Postgres persistence for registrations
 - FusionPlay-style member dashboard for weekly slot signup
 
 ## Stack
 
 - Next.js App Router
 - Tailwind CSS
-- SQLite via `better-sqlite3`
+- Postgres via `pg`
 - Abstract Email Validation API in production, mock mode for local development
 
 ## Setup
@@ -55,6 +55,6 @@ You still need to provide:
 - Every slot has capacity for 4 teams.
 - Each team can have one active reservation at a time; switching slots automatically replaces the old one.
 - Every reservation starts as `pending` until an admin approves or rejects it.
-- The MVP stores data locally in `./data/theleague.db`. For a hosted deployment, move this to a managed free-tier database such as Supabase Postgres or Turso.
+- The app expects `DATABASE_URL` to point at a hosted Postgres database such as Supabase.
 - `EMAIL_VERIFICATION_MODE=mock` accepts valid `@virginia.edu` addresses without calling an external API.
 - The admin dashboard lives at `/admin` and is protected by `ADMIN_PORTAL_PASSWORD`.

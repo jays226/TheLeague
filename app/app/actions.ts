@@ -21,7 +21,7 @@ async function requireTeam() {
     redirect("/");
   }
 
-  const team = getTeamByAccessToken(accessToken);
+  const team = await getTeamByAccessToken(accessToken);
 
   if (!team) {
     redirect("/");
@@ -43,10 +43,10 @@ export async function reserveSlotAction(formData: FormData) {
   try {
     const team = await requireTeam();
     const slotId = String(formData.get("slotId") || "");
-    const existingApproved = getActiveReservationForTeam(team.id);
-    const existingPending = getPendingReservationForTeam(team.id);
+    const existingApproved = await getActiveReservationForTeam(team.id);
+    const existingPending = await getPendingReservationForTeam(team.id);
 
-    reserveSlot({
+    await reserveSlot({
       id: createId(),
       teamId: team.id,
       slotId
@@ -70,8 +70,8 @@ export async function reserveSlotAction(formData: FormData) {
 export async function cancelReservationAction() {
   try {
     const team = await requireTeam();
-    const pendingReservation = getPendingReservationForTeam(team.id);
-    cancelActiveReservation(team.id);
+    const pendingReservation = await getPendingReservationForTeam(team.id);
+    await cancelActiveReservation(team.id);
     revalidatePath("/app");
     redirectWithMessage(
       pendingReservation ? "Your pending change request was cancelled." : "Your reservation was cancelled.",

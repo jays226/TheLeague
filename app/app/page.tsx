@@ -15,15 +15,17 @@ import {
   getReservationStats,
   getTeamByAccessToken,
   listReservationsForTeam,
-  listSlots
+  listSlots,
+  type ReservationRecord,
+  type SlotRecord
 } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatCurrency } from "@/lib/utils";
 import { leagueCookieName } from "@/lib/session";
 
 function groupSlotsByDay(
-  slots: Awaited<ReturnType<typeof listSlots>>,
-  activeReservation: ReturnType<typeof getActiveReservationForTeam>
+  slots: SlotRecord[],
+  activeReservation: Awaited<ReturnType<typeof getActiveReservationForTeam>>
 ) {
   const grouped = new Map<
     string,
@@ -81,17 +83,17 @@ export default async function AppPage({
     redirect("/");
   }
 
-  const team = getTeamByAccessToken(accessToken);
+  const team = await getTeamByAccessToken(accessToken);
 
   if (!team) {
     redirect("/");
   }
 
-  const activeReservation = getActiveReservationForTeam(team.id);
-  const pendingReservation = getPendingReservationForTeam(team.id);
-  const reservationHistory = listReservationsForTeam(team.id);
-  const slots = listSlots();
-  const stats = getReservationStats();
+  const activeReservation = await getActiveReservationForTeam(team.id);
+  const pendingReservation = await getPendingReservationForTeam(team.id);
+  const reservationHistory = (await listReservationsForTeam(team.id)) as ReservationRecord[];
+  const slots = (await listSlots()) as SlotRecord[];
+  const stats = await getReservationStats();
   const groupedSlots = groupSlotsByDay(slots, activeReservation);
 
   return (
@@ -244,7 +246,7 @@ export default async function AppPage({
                   </span>
                 </div>
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {daySlots.map((slot) => (
+                  {daySlots.map((slot: (typeof daySlots)[number]) => (
                     <SlotCard
                       action={reserveSlotAction}
                       buttonLabel={
@@ -321,7 +323,7 @@ export default async function AppPage({
                     No reservation activity yet.
                   </div>
                 ) : (
-                  reservationHistory.map((reservation) => (
+                  reservationHistory.map((reservation: ReservationRecord) => (
                     <div className="rounded-2xl bg-white/80 p-4" key={reservation.id}>
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-foreground">

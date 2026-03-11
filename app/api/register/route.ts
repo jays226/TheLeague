@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     const rawData = await request.json();
     const data = signupSchema.parse(rawData);
-    ensureNoExistingTeam(data);
+    await ensureNoExistingTeam(data);
 
     const verification = await verifyEmails([data.playerOneEmail, data.playerTwoEmail]);
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const team = createTeam({
+    const team = await createTeam({
       id: createId(),
       teamName: data.teamName.trim(),
       playerOneName: data.playerOneName.trim(),

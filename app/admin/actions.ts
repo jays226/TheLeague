@@ -60,11 +60,11 @@ export async function logoutAction() {
 export async function approveTeamPaymentAction(formData: FormData) {
   await requireAdmin();
   const teamId = String(formData.get("teamId") || "");
-  const teamBefore = getTeamById(teamId);
+  const teamBefore = await getTeamById(teamId);
 
-  approveTeamPayment(teamId);
+  await approveTeamPayment(teamId);
 
-  const teamAfter = getTeamById(teamId);
+  const teamAfter = await getTeamById(teamId);
 
   if (teamBefore?.payment_status !== "approved" && teamAfter?.payment_status === "approved") {
     try {
@@ -80,14 +80,14 @@ export async function approveTeamPaymentAction(formData: FormData) {
 
 export async function approveReservationAction(formData: FormData) {
   await requireAdmin();
-  approveReservation(String(formData.get("reservationId") || ""));
+  await approveReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
 }
 
 export async function rejectReservationAction(formData: FormData) {
   await requireAdmin();
-  rejectReservation(String(formData.get("reservationId") || ""));
+  await rejectReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
 }
@@ -95,7 +95,7 @@ export async function rejectReservationAction(formData: FormData) {
 export async function createTeamAction(formData: FormData) {
   await requireAdmin();
 
-  createTeamByAdmin({
+  await createTeamByAdmin({
     id: createId(),
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
@@ -116,7 +116,7 @@ export async function updateTeamAction(formData: FormData) {
 
   const password = String(formData.get("password") || "").trim();
 
-  updateTeamByAdmin({
+  await updateTeamByAdmin({
     teamId: String(formData.get("teamId") || ""),
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
@@ -134,7 +134,7 @@ export async function updateTeamAction(formData: FormData) {
 
 export async function deleteTeamAction(formData: FormData) {
   await requireAdmin();
-  deleteTeamByAdmin(String(formData.get("teamId") || ""));
+  await deleteTeamByAdmin(String(formData.get("teamId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
 }
@@ -142,7 +142,7 @@ export async function deleteTeamAction(formData: FormData) {
 export async function moveTeamReservationAction(formData: FormData) {
   await requireAdmin();
   const slotId = String(formData.get("slotId") || "").trim();
-  moveTeamReservation(String(formData.get("teamId") || ""), slotId || null);
+  await moveTeamReservation(String(formData.get("teamId") || ""), slotId || null);
   revalidatePath("/admin");
   revalidatePath("/app");
 }

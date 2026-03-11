@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   try {
     const rawData = await request.json();
     const data = loginSchema.parse(rawData);
-    const team = getTeamByName(data.teamName);
+    const team = await getTeamByName(data.teamName);
 
     if (!team || !verifyPassword(data.password, team.password_hash)) {
       return NextResponse.json({ error: "Invalid team name or password." }, { status: 401 });

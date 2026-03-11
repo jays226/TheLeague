@@ -14,10 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
+  type AdminTeamRow,
   getReservationStats,
   listAllReservations,
   listSlots,
-  listTeamsWithReservations
+  listTeamsWithReservations,
+  type ReservationRecord,
+  type SlotRecord
 } from "@/lib/db";
 import { env } from "@/lib/env";
 import { adminCookieName, createAdminSessionValue } from "@/lib/session";
@@ -70,10 +73,10 @@ export default async function AdminPage({
     );
   }
 
-  const teams = listTeamsWithReservations();
-  const slots = listSlots();
-  const reservations = listAllReservations();
-  const stats = getReservationStats();
+  const teams = (await listTeamsWithReservations()) as AdminTeamRow[];
+  const slots = (await listSlots()) as SlotRecord[];
+  const reservations = (await listAllReservations()) as ReservationRecord[];
+  const stats = await getReservationStats();
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -182,7 +185,7 @@ export default async function AdminPage({
                   No teams registered yet.
                 </div>
               ) : (
-                teams.map((team) => (
+                teams.map((team: AdminTeamRow) => (
                   <div className="rounded-2xl bg-white/80 p-4" key={team.id}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -311,7 +314,7 @@ export default async function AdminPage({
           <Card className="p-6">
             <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Slot board</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {slots.map((slot) => (
+              {slots.map((slot: SlotRecord) => (
                 <div className="rounded-2xl bg-white/80 p-4" key={slot.id}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-foreground">
@@ -338,7 +341,7 @@ export default async function AdminPage({
                 No reservation activity yet.
               </div>
             ) : (
-              reservations.map((reservation) => (
+              reservations.map((reservation: ReservationRecord) => (
                 <div className="rounded-2xl bg-white/80 p-4" key={reservation.id}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>

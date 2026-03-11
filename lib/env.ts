@@ -2,6 +2,7 @@ export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   venmoLink: process.env.NEXT_PUBLIC_VENMO_LINK || "",
   dbPath: process.env.DATABASE_PATH || "./data/theleague.db",
+  databaseUrl: process.env.DATABASE_URL,
   emailVerificationApiKey: process.env.EMAIL_VERIFICATION_API_KEY,
   emailVerificationMode: process.env.EMAIL_VERIFICATION_MODE || "mock",
   adminPortalPassword: process.env.ADMIN_PORTAL_PASSWORD,
