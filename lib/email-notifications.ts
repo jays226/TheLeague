@@ -8,7 +8,7 @@ async function getTransporter() {
     return null;
   }
 
-  const nodemailer = await import("nodemailer");
+  const { default: nodemailer } = await import("nodemailer");
 
   return nodemailer.createTransport({
     host: env.smtpHost,
