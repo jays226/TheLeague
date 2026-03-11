@@ -140,19 +140,34 @@ export default async function AppPage({
           </div>
         </header>
 
-        <Card className="border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6">
+        <Card
+          className={
+            team.payment_status === "approved"
+              ? "border-[rgba(32,116,74,0.18)] bg-[linear-gradient(135deg,rgba(32,116,74,0.14),rgba(255,255,255,0.94))] p-6"
+              : "border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6"
+          }
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Venmo paywall</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
+                {team.payment_status === "approved" ? "Venmo payment accepted!" : "Venmo paywall"}
+              </p>
               <p className="mt-2 text-xl font-semibold text-foreground">
-                Pay $40 total, or $20 per player, as soon as you enter the portal.
+                {team.payment_status === "approved"
+                  ? "Your team payment has been approved and your account is ready for scheduling."
+                  : "Pay $40 total, or $20 per player, as soon as you enter the portal."}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Send the payment to `@theleague_uva` and include your team name in the note so the
-                admin can approve your account quickly.
+                {team.payment_status === "approved"
+                  ? "You can view slots immediately below. Any future switch request will still need admin approval."
+                  : "Send the payment to `@theleague_uva` and include your team name in the note so the admin can approve your account quickly."}
               </p>
             </div>
-            {env.venmoLink ? (
+            {team.payment_status === "approved" ? (
+              <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-primary shadow-soft">
+                Venmo payment accepted!
+              </div>
+            ) : env.venmoLink ? (
               <a
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
                 href={env.venmoLink}

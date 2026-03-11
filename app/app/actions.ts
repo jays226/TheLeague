@@ -40,6 +40,9 @@ function redirectWithMessage(message: string, tone: "success" | "error") {
 }
 
 export async function reserveSlotAction(formData: FormData) {
+  let successMessage =
+    "Your change request is pending admin approval. Your current slot stays active until approved.";
+
   try {
     const team = await requireTeam();
     const slotId = String(formData.get("slotId") || "");
@@ -52,37 +55,41 @@ export async function reserveSlotAction(formData: FormData) {
       slotId
     });
 
-    revalidatePath("/app");
-    redirectWithMessage(
+    successMessage =
       existingApproved || existingPending
         ? "Your change request is pending admin approval. Your current slot stays active until approved."
-        : "You are officially signed up for that slot.",
-      "success"
-    );
+        : "You are officially signed up for that slot.";
+
+    revalidatePath("/app");
   } catch (error) {
     redirectWithMessage(
       error instanceof Error ? error.message : "Unable to reserve slot.",
       "error"
     );
   }
+
+  redirectWithMessage(successMessage, "success");
 }
 
 export async function cancelReservationAction() {
+  let successMessage = "Your reservation was cancelled.";
+
   try {
     const team = await requireTeam();
     const pendingReservation = await getPendingReservationForTeam(team.id);
     await cancelActiveReservation(team.id);
+    successMessage = pendingReservation
+      ? "Your pending change request was cancelled."
+      : "Your reservation was cancelled.";
     revalidatePath("/app");
-    redirectWithMessage(
-      pendingReservation ? "Your pending change request was cancelled." : "Your reservation was cancelled.",
-      "success"
-    );
   } catch (error) {
     redirectWithMessage(
       error instanceof Error ? error.message : "Unable to cancel reservation.",
       "error"
     );
   }
+
+  redirectWithMessage(successMessage, "success");
 }
 
 export async function logoutTeamAction() {
