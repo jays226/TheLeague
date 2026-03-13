@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { RegistrationCountdown } from "@/components/registration-countdown";
 import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
 import { listSlots, type SlotRecord } from "@/lib/db";
@@ -62,6 +63,7 @@ export default async function HomePage() {
                 <h1 className="mt-6 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:text-7xl lg:text-[6.5rem]">
                   The League
                 </h1>
+                <RegistrationCountdown />
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
                   UVA&apos;s weekly pickleball league built for teams, standings, and a playoff run.
                 </p>
@@ -102,13 +104,16 @@ export default async function HomePage() {
                     Teams choose one weekly one-hour time slot: Monday, Tuesday, or Wednesday from
                     6-7pm or 7-8pm.
                   </p>
-                  <p>Win two out of three games against your opponent each week.</p>
+                  <p>
+                    Each week, you and your opponent will play three games during your one-hour
+                    time slot. Winning at least two games secures the matchup victory.
+                  </p>
                   <p>
                     Top teams advance to the playoff tournament for a chance at the first-place cash
                     prize of $500 or more.
                   </p>
                   <p>We reserve the courts for you, so your team just has to show up and play.</p>
-                  <p>Deadline to register is March 20. Play starts March 23 and runs through April 27.</p>
+                  <p>Deadline to register is March 21. Play starts March 23 and runs through April 27.</p>
                 </div>
               </Card>
 
@@ -117,7 +122,10 @@ export default async function HomePage() {
                   {[
                     ["Prize", "$500+ for first place"],
                     ["Fee", "$40 per team ($20 per person)"],
-                    ["Format", "Win two out of three games against your opponent each week"],
+                    [
+                      "Format",
+                      "Each week, you and your opponent will play three games during your one-hour time slot. Winning at least two games secures the matchup victory."
+                    ],
                     ["Season", "March 23 through April 27"]
                   ].map(([title, body]) => (
                     <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={title}>
@@ -180,7 +188,7 @@ export default async function HomePage() {
                 </h2>
                 <div className="mt-6 space-y-4 text-base leading-7 text-muted-foreground">
                   <p>Registration fee for each team is $40 total, or $20 per person.</p>
-                  <p>Deadline to register is Friday, March 20, 2026 at 11:59 PM.</p>
+                  <p>Deadline to register is Saturday, March 21, 2026 at 11:59 PM.</p>
                   <p>We reserve the courts for you each week once your team is in the league.</p>
                   <p>Once approved, your team can lock a weekly slot and manage scheduling in the dashboard.</p>
                 </div>
