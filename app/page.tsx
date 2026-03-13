@@ -137,7 +137,7 @@ export default async function HomePage() {
                         className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 text-sm font-semibold text-foreground shadow-soft"
                         key={slot.id}
                       >
-                        {slot.day_label} {slot.time_label} ({slot.reserved_count}/{slot.capacity})
+                        {slot.day_label} {slot.time_label} ({slot.reserved_count}/{slot.capacity} slots filled)
                       </div>
                     ))
                   ) : (

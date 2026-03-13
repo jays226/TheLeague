@@ -4,7 +4,12 @@ import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: "The League",
-  description: "UVA's student pickleball league signup and member portal."
+  description: "UVA's student pickleball league signup and member portal.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png"
+  }
 };
 
 export default function RootLayout({
