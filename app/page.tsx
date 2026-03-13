@@ -113,7 +113,7 @@ export default function HomePage() {
                   {[
                     ["Prize", "$500+ for first place"],
                     ["Fee", "$40 per team ($20 per person)"],
-                    ["Format", "Best two out of three each week"],
+                    ["Format", "Win two out of three games against your opponent each week"],
                     ["Season", "March 23 through April 27"]
                   ].map(([title, body]) => (
                     <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={title}>
