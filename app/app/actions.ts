@@ -61,6 +61,7 @@ export async function reserveSlotAction(formData: FormData) {
         : "You are officially signed up for that slot.";
 
     revalidatePath("/app");
+    revalidatePath("/");
   } catch (error) {
     redirectWithMessage(
       error instanceof Error ? error.message : "Unable to reserve slot.",
@@ -82,6 +83,7 @@ export async function cancelReservationAction() {
       ? "Your pending change request was cancelled."
       : "Your reservation was cancelled.";
     revalidatePath("/app");
+    revalidatePath("/");
   } catch (error) {
     redirectWithMessage(
       error instanceof Error ? error.message : "Unable to cancel reservation.",

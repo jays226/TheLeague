@@ -5,6 +5,8 @@ import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
 import { listSlots, type SlotRecord } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   let slots: SlotRecord[] = [];
 

@@ -115,6 +115,7 @@ export async function approveTeamPaymentAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
 
 export async function approveReservationAction(formData: FormData) {
@@ -122,6 +123,7 @@ export async function approveReservationAction(formData: FormData) {
   await approveReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
 
 export async function rejectReservationAction(formData: FormData) {
@@ -129,6 +131,7 @@ export async function rejectReservationAction(formData: FormData) {
   await rejectReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
 
 export async function createTeamAction(formData: FormData) {
@@ -148,6 +151,7 @@ export async function createTeamAction(formData: FormData) {
   });
 
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 export async function updateTeamAction(formData: FormData) {
@@ -169,6 +173,7 @@ export async function updateTeamAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
 
 export async function deleteTeamAction(formData: FormData) {
@@ -176,6 +181,7 @@ export async function deleteTeamAction(formData: FormData) {
   await deleteTeamByAdmin(String(formData.get("teamId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
 
 export async function moveTeamReservationAction(formData: FormData) {
@@ -184,4 +190,5 @@ export async function moveTeamReservationAction(formData: FormData) {
   await moveTeamReservation(String(formData.get("teamId") || ""), slotId || null);
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/");
 }
