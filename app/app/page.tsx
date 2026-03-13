@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { cancelReservationAction, logoutTeamAction, reserveSlotAction } from "@/app/app/actions";
+import { logoutTeamAction, reserveSlotAction } from "@/app/app/actions";
 import { ReservationBanner } from "@/components/dashboard/reservation-banner";
 import { SlotCard } from "@/components/dashboard/slot-card";
 import { SummaryStats } from "@/components/dashboard/summary-stats";
@@ -224,16 +224,6 @@ export default async function AppPage({
           <div className="space-y-5">
             {activeReservation ? (
               <ReservationBanner
-                action={
-                  <form action={cancelReservationAction}>
-                    <button
-                      className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
-                      type="submit"
-                    >
-                      Cancel reservation
-                    </button>
-                  </form>
-                }
                 body={`${activeReservation.day_label} at ${activeReservation.time_label} is your current confirmed slot.`}
                 title="Current selected slot"
                 tone="success"
