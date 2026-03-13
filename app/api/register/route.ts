@@ -38,6 +38,10 @@ export async function POST(request: Request) {
       accessToken: createAccessToken()
     });
 
+    if (!team) {
+      throw new Error("Unable to create your team.");
+    }
+
     try {
       await sendWelcomeRegistrationEmail(team);
     } catch (error) {
