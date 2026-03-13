@@ -15,15 +15,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   type AdminTeamRow,
+  getAdminSession,
   getReservationStats,
   listAllReservations,
   listSlots,
+  purgeExpiredAdminSessions,
   listTeamsWithReservations,
   type ReservationRecord,
   type SlotRecord
 } from "@/lib/db";
 import { env } from "@/lib/env";
-import { adminCookieName, createAdminSessionValue } from "@/lib/session";
+import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
 
 export default async function AdminPage({
   searchParams
@@ -32,9 +34,14 @@ export default async function AdminPage({
 }) {
   const params = await searchParams;
   const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(adminCookieName)?.value;
+
+  await purgeExpiredAdminSessions();
+
   const isAuthed =
     !!env.adminPortalPassword &&
-    cookieStore.get(adminCookieName)?.value === createAdminSessionValue(env.adminPortalPassword);
+    !!sessionToken &&
+    !!(await getAdminSession(hashAdminSessionToken(sessionToken)));
 
   if (!isAuthed) {
     return (
@@ -57,7 +64,9 @@ export default async function AdminPage({
               />
               {params.error ? (
                 <div className="rounded-2xl border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] px-4 py-3 text-sm text-foreground">
-                  Invalid admin password.
+                  {params.error === "rate-limit"
+                    ? "Too many failed attempts. Try again in 15 minutes."
+                    : "Invalid admin password."}
                 </div>
               ) : null}
               <button

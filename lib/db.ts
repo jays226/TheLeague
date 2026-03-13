@@ -29,12 +29,49 @@ if (process.env.NODE_ENV !== "production") {
   global.__leaguePool = pool;
 }
 
+let bootstrapPromise: Promise<void> | undefined;
+
+async function ensureBootstrap() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+          token_hash text PRIMARY KEY,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          expires_at timestamptz NOT NULL
+        )
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS admin_login_attempts (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at
+        ON admin_sessions (expires_at)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_admin_login_attempts_created_at
+        ON admin_login_attempts (created_at)
+      `);
+    })();
+  }
+
+  await bootstrapPromise;
+}
+
 async function query<T extends QueryResultRow>(text: string, values: unknown[] = []) {
+  await ensureBootstrap();
   const result = await pool.query<T>(text, values);
   return result.rows;
 }
 
 async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>) {
+  await ensureBootstrap();
   const client = await pool.connect();
 
   try {
@@ -127,6 +164,61 @@ function hydrateReservation<T extends ReservationRecord>(reservation: T) {
     time_label: slot?.timeLabel,
     capacity: slot?.capacity
   };
+}
+
+export async function createAdminSession(tokenHash: string, expiresAt: Date) {
+  await query(
+    `
+      INSERT INTO admin_sessions (token_hash, expires_at)
+      VALUES ($1, $2)
+      ON CONFLICT (token_hash)
+      DO UPDATE SET expires_at = EXCLUDED.expires_at
+    `,
+    [tokenHash, expiresAt.toISOString()]
+  );
+}
+
+export async function getAdminSession(tokenHash: string) {
+  const rows = await query<{ token_hash: string; created_at: string; expires_at: string }>(
+    `
+      SELECT token_hash, created_at, expires_at
+      FROM admin_sessions
+      WHERE token_hash = $1
+        AND expires_at > now()
+      LIMIT 1
+    `,
+    [tokenHash]
+  );
+
+  return rows[0];
+}
+
+export async function deleteAdminSession(tokenHash: string) {
+  await query("DELETE FROM admin_sessions WHERE token_hash = $1", [tokenHash]);
+}
+
+export async function purgeExpiredAdminSessions() {
+  await query("DELETE FROM admin_sessions WHERE expires_at <= now()");
+}
+
+export async function recordAdminLoginFailure() {
+  await query("INSERT INTO admin_login_attempts DEFAULT VALUES");
+}
+
+export async function clearRecentAdminLoginFailures() {
+  await query("DELETE FROM admin_login_attempts");
+}
+
+export async function isAdminLoginRateLimited() {
+  const rows = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM admin_login_attempts
+      WHERE created_at > now() - interval '15 minutes'
+    `
+  );
+
+  return Number(rows[0]?.count || 0) >= 5;
 }
 
 export async function createTeam(input: CreateTeamInput) {

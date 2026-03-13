@@ -8,26 +8,48 @@ import { redirect } from "next/navigation";
 import {
   approveReservation,
   approveTeamPayment,
+  clearRecentAdminLoginFailures,
   createTeamByAdmin,
+  createAdminSession,
   deleteTeamByAdmin,
+  deleteAdminSession,
   getTeamById,
+  getAdminSession,
+  isAdminLoginRateLimited,
   moveTeamReservation,
+  purgeExpiredAdminSessions,
+  recordAdminLoginFailure,
   rejectReservation,
   updateTeamByAdmin
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
 import { env } from "@/lib/env";
-import { adminCookieName, createAccessToken, createAdminSessionValue, createId } from "@/lib/session";
+import {
+  adminCookieName,
+  adminSessionLifetimeSeconds,
+  createAccessToken,
+  createAdminSessionToken,
+  createId,
+  hashAdminSessionToken
+} from "@/lib/session";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
-  const session = cookieStore.get(adminCookieName)?.value;
+  const sessionToken = cookieStore.get(adminCookieName)?.value;
 
   if (!env.adminPortalPassword) {
     throw new Error("ADMIN_PORTAL_PASSWORD is not configured.");
   }
 
-  if (session !== createAdminSessionValue(env.adminPortalPassword)) {
+  if (!sessionToken) {
+    redirect("/admin");
+  }
+
+  await purgeExpiredAdminSessions();
+  const session = await getAdminSession(hashAdminSessionToken(sessionToken));
+
+  if (!session) {
+    cookieStore.delete(adminCookieName);
     redirect("/admin");
   }
 }
@@ -35,17 +57,30 @@ async function requireAdmin() {
 export async function loginAction(formData: FormData) {
   const password = String(formData.get("password") || "");
 
+  await purgeExpiredAdminSessions();
+
+  if (await isAdminLoginRateLimited()) {
+    redirect("/admin?error=rate-limit");
+  }
+
   if (!env.adminPortalPassword || password !== env.adminPortalPassword) {
+    await recordAdminLoginFailure();
     redirect("/admin?error=1");
   }
 
+  await clearRecentAdminLoginFailures();
+
+  const sessionToken = createAdminSessionToken();
+  const expiresAt = new Date(Date.now() + adminSessionLifetimeSeconds * 1000);
+  await createAdminSession(hashAdminSessionToken(sessionToken), expiresAt);
+
   const cookieStore = await cookies();
-  cookieStore.set(adminCookieName, createAdminSessionValue(password), {
+  cookieStore.set(adminCookieName, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30
+    maxAge: adminSessionLifetimeSeconds
   });
 
   redirect("/admin");
@@ -53,6 +88,10 @@ export async function loginAction(formData: FormData) {
 
 export async function logoutAction() {
   const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(adminCookieName)?.value;
+  if (sessionToken) {
+    await deleteAdminSession(hashAdminSessionToken(sessionToken));
+  }
   cookieStore.delete(adminCookieName);
   redirect("/admin");
 }
