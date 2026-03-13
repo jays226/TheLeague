@@ -47,17 +47,8 @@ export default function LoginPage() {
               Use your team name and password to reopen the dashboard, check payment status, and
               manage your weekly slot reservation.
             </p>
-            <div className="mt-6 inline-flex items-center gap-4 rounded-[28px] border border-white/70 bg-white/70 p-4 shadow-soft">
-              <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-[rgba(29,96,66,0.08)]">
-                <Image
-                  alt="The League logo"
-                  className="h-14 w-14 object-contain"
-                  height={56}
-                  src="/logo.png"
-                  width={56}
-                />
-              </div>
-              <p className="max-w-xs text-sm text-muted-foreground">
+            <div className="mt-6 inline-flex rounded-[28px] border border-white/70 bg-white/70 p-4 shadow-soft">
+              <p className="max-w-sm text-sm text-muted-foreground">
                 Same team, same dashboard, same weekly slot board.
               </p>
             </div>

@@ -99,17 +99,12 @@ export default function HomePage() {
                     Teams choose one weekly one-hour time slot: Monday, Tuesday, or Wednesday from
                     6-7pm or 7-8pm.
                   </p>
-                  <p>
-                    Each week, your matchup is decided by best two out of three games.
-                  </p>
+                  <p>Win two out of three games against your opponent each week.</p>
                   <p>
                     Top teams advance to the playoff tournament for a chance at the first-place cash
                     prize of $500 or more.
                   </p>
-                  <p>
-                    Deadline to register is March 20. Play starts March 23 and runs through the end
-                    of the semester.
-                  </p>
+                  <p>Deadline to register is March 20. Play starts March 23 and runs through April 27.</p>
                 </div>
               </Card>
 
@@ -117,9 +112,9 @@ export default function HomePage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     ["Prize", "$500+ for first place"],
-                    ["Fee", "$40 per team, $20 per person"],
+                    ["Fee", "$40 per team ($20 per person)"],
                     ["Format", "Best two out of three each week"],
-                    ["Season", "March 23 through semester end"]
+                    ["Season", "March 23 through April 27"]
                   ].map(([title, body]) => (
                     <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={title}>
                       <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
