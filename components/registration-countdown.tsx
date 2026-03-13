@@ -42,22 +42,25 @@ export function RegistrationCountdown() {
   }
 
   return (
-    <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-white/70 bg-white/72 px-5 py-4 shadow-soft backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/65">
+    <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-white/70 bg-white/72 px-4 py-4 text-center shadow-soft backdrop-blur sm:px-5">
+      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/65 sm:text-xs sm:tracking-[0.16em]">
         Registration closes Saturday, March 21, 2026 at 11:59 PM
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2 sm:gap-3">
         {[
           ["Days", timeLeft.days],
-          ["Hours", timeLeft.hours],
-          ["Minutes", timeLeft.minutes],
-          ["Seconds", timeLeft.seconds]
+          ["Hrs", timeLeft.hours],
+          ["Min", timeLeft.minutes],
+          ["Sec", timeLeft.seconds]
         ].map(([label, value]) => (
-          <div className="rounded-2xl bg-[rgba(29,96,66,0.06)] px-3 py-3" key={label}>
-            <p className="text-2xl font-semibold tracking-[-0.04em] text-foreground sm:text-3xl">
+          <div
+            className="flex min-w-0 flex-col items-center justify-center rounded-2xl bg-[rgba(29,96,66,0.06)] px-2 py-3 text-center sm:px-3"
+            key={label}
+          >
+            <p className="text-xl font-semibold tracking-[-0.04em] text-foreground sm:text-3xl">
               {String(value).padStart(2, "0")}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary/65">
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/65 sm:text-xs sm:tracking-[0.16em]">
               {label}
             </p>
           </div>
