@@ -105,6 +105,7 @@ export default async function HomePage() {
                     Top teams advance to the playoff tournament for a chance at the first-place cash
                     prize of $500 or more.
                   </p>
+                  <p>We reserve the courts for you, so your team just has to show up and play.</p>
                   <p>Deadline to register is March 20. Play starts March 23 and runs through April 27.</p>
                 </div>
               </Card>
@@ -178,6 +179,7 @@ export default async function HomePage() {
                 <div className="mt-6 space-y-4 text-base leading-7 text-muted-foreground">
                   <p>Registration fee for each team is $40 total, or $20 per person.</p>
                   <p>Deadline to register is Friday, March 20, 2026 at 11:59 PM.</p>
+                  <p>We reserve the courts for you each week once your team is in the league.</p>
                   <p>Once approved, your team can lock a weekly slot and manage scheduling in the dashboard.</p>
                 </div>
               </Card>

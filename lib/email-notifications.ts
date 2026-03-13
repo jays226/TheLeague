@@ -83,22 +83,39 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
     text: [
       `Welcome to The League, ${team.team_name}!`,
       "",
-      "Your team has been registered successfully.",
+      "Your team has been registered successfully for The League.",
       "",
-      `Pay @theleague_uva (${venmoLink})`,
-      "to gain access to sign up for a time slot.",
+      "To gain access to sign up for a time slot, send the team fee of $40 total.",
+      "",
+      `Pay @theleague_uva here: ${venmoLink}`,
       "",
       "Reply to this email with any questions!",
       "",
       "The League"
     ].join("\n"),
     html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
-        <h2 style="margin-bottom: 12px;">Welcome to the League!</h2>
-        <p>Your team <strong>${team.team_name}</strong> is officially registered.</p>
-        <p>Pay <a href="${venmoLink}">@theleague_uva</a> to gain access to sign up for a time slot.</p>
-        <p>Reply to this email with any questions!</p>
-        <p style="margin-top: 20px;">The League</p>
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525; max-width: 640px; margin: 0 auto;">
+        <div style="border: 1px solid rgba(29,96,66,0.12); border-radius: 18px; overflow: hidden; background: #ffffff;">
+          <div style="padding: 24px 24px 12px; background: linear-gradient(180deg, #eef3ee 0%, #ffffff 100%);">
+            <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #4d6a5c; font-weight: 700;">
+              The League
+            </p>
+            <h2 style="margin: 0; font-size: 28px; line-height: 1.15; color: #173525;">
+              Welcome to the League!
+            </h2>
+          </div>
+          <div style="padding: 8px 24px 24px;">
+            <p>Your team <strong>${team.team_name}</strong> is officially registered for The League.</p>
+            <p>To gain access to sign up for a time slot, send the team fee of <strong>$40 total</strong>.</p>
+            <p>
+              <strong>Pay <a href="${venmoLink}" style="color: #1d6042; text-decoration: none;">@theleague_uva</a></strong>
+              <br />
+              <span style="color: #5a6d62;">${venmoLink}</span>
+            </p>
+            <p>Reply to this email with any questions!</p>
+            <p style="margin-top: 24px;">The League</p>
+          </div>
+        </div>
       </div>
     `
   });
