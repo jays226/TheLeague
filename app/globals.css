@@ -22,6 +22,126 @@ body {
   color: hsl(148 38% 13%);
 }
 
+.landing-snap {
+  scroll-snap-type: y proximity;
+}
+
+.landing-panel {
+  position: relative;
+  scroll-snap-align: start;
+}
+
+.landing-hero-card {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 2.5rem;
+  padding: 3rem 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(247, 242, 233, 0.86));
+  box-shadow:
+    0 26px 60px rgba(29, 96, 66, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+.parallax-grid {
+  background-image:
+    linear-gradient(rgba(29, 96, 66, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 96, 66, 0.06) 1px, transparent 1px);
+  background-position: center;
+  background-size: 44px 44px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 82%);
+}
+
+.parallax-orb {
+  position: absolute;
+  z-index: -5;
+  border-radius: 9999px;
+  filter: blur(12px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.parallax-orb-left {
+  top: 4rem;
+  left: -7rem;
+  width: 18rem;
+  height: 18rem;
+  background: radial-gradient(circle, rgba(245, 132, 79, 0.34), rgba(245, 132, 79, 0));
+  animation: float-left 16s ease-in-out infinite;
+}
+
+.parallax-orb-right {
+  top: 24rem;
+  right: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, rgba(32, 116, 74, 0.3), rgba(32, 116, 74, 0));
+  animation: float-right 18s ease-in-out infinite;
+}
+
+.parallax-panel {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(247, 242, 233, 0.84));
+  box-shadow:
+    0 20px 45px rgba(29, 96, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+.parallax-panel-hero {
+  padding: 1.5rem;
+  border-radius: 2rem;
+  transform: translateY(-1rem);
+}
+
+.parallax-panel-wide {
+  padding: 1.25rem;
+  border-radius: 2rem;
+  transform: translateY(-0.5rem);
+}
+
+@keyframes float-left {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(1rem, 2rem, 0);
+  }
+}
+
+@keyframes float-right {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-1.25rem, 1.5rem, 0);
+  }
+}
+
+@media (min-width: 768px) {
+  .landing-snap {
+    scroll-snap-type: y mandatory;
+  }
+
+  .landing-hero-card {
+    padding: 4rem 3rem;
+  }
+
+  .parallax-panel-hero {
+    transform: translateY(-2rem);
+  }
+
+  .parallax-panel-wide {
+    transform: translateY(-1rem);
+  }
+
+  body {
+    background-attachment: fixed;
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
