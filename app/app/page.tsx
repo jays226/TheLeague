@@ -123,6 +123,14 @@ export default async function AppPage({
             </div>
           </div>
           <div className="flex gap-3">
+            {team.payment_status === "approved" ? (
+              <Link
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
+                href="/schedule"
+              >
+                Schedule
+              </Link>
+            ) : null}
             <Link
               className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
               href="/"
