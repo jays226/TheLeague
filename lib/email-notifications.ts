@@ -63,3 +63,43 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
     `
   });
 }
+
+export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Welcome email skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  const recipients = [team.player_one_email, team.player_two_email];
+  const subject = "Welcome to the League!";
+  const venmoLink = env.venmoLink || "https://venmo.com/u/theleague_uva";
+
+  await transporter.sendMail({
+    from: env.smtpFrom,
+    to: recipients.join(", "),
+    subject,
+    text: [
+      `Welcome to The League, ${team.team_name}!`,
+      "",
+      "Your team has been registered successfully.",
+      "",
+      `Pay @theleague_uva (${venmoLink})`,
+      "to gain access to sign up for a time slot.",
+      "",
+      "Reply to this email with any questions!",
+      "",
+      "The League"
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
+        <h2 style="margin-bottom: 12px;">Welcome to the League!</h2>
+        <p>Your team <strong>${team.team_name}</strong> is officially registered.</p>
+        <p>Pay <a href="${venmoLink}">@theleague_uva</a> to gain access to sign up for a time slot.</p>
+        <p>Reply to this email with any questions!</p>
+        <p style="margin-top: 20px;">The League</p>
+      </div>
+    `
+  });
+}

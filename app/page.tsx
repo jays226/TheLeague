@@ -3,17 +3,18 @@ import Link from "next/link";
 
 import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
+import { listSlots, type SlotRecord } from "@/lib/db";
 
-const weeklySlots = [
-  "Monday 6-7pm",
-  "Monday 7-8pm",
-  "Tuesday 6-7pm",
-  "Tuesday 7-8pm",
-  "Wednesday 6-7pm",
-  "Wednesday 7-8pm"
-];
+export default async function HomePage() {
+  let slots: SlotRecord[] = [];
 
-export default function HomePage() {
+  try {
+    slots = await listSlots();
+  } catch {
+    // Leave the public marketing page available even if the database is temporarily unavailable.
+    slots = [];
+  }
+
   return (
     <main className="relative overflow-hidden">
       <div className="absolute inset-0 -z-20 bg-court" />
@@ -124,15 +125,26 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
+                <div className="mt-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                    Time Slots
+                  </p>
+                </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {weeklySlots.map((slot) => (
-                    <div
-                      className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 text-sm font-semibold text-foreground shadow-soft"
-                      key={slot}
-                    >
-                      {slot}
+                  {slots.length > 0 ? (
+                    slots.map((slot) => (
+                      <div
+                        className="rounded-2xl border border-white/70 bg-white/78 px-4 py-3 text-sm font-semibold text-foreground shadow-soft"
+                        key={slot.id}
+                      >
+                        {slot.day_label} {slot.time_label} ({slot.reserved_count}/{slot.capacity})
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/70 bg-white/70 px-4 py-3 text-sm text-muted-foreground sm:col-span-2">
+                      Slot availability will appear here once the schedule is loaded.
                     </div>
-                  ))}
+                  )}
                 </div>
                 <div className="mt-6 flex flex-wrap gap-4">
                   <Link

@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 import { hashPassword } from "@/lib/auth";
 import { createTeam } from "@/lib/db";
+import { sendWelcomeRegistrationEmail } from "@/lib/email-notifications";
 import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
 import { createAccessToken, createId, leagueCookieName } from "@/lib/session";
@@ -36,6 +37,12 @@ export async function POST(request: Request) {
       verificationStatus: JSON.stringify(verification.results),
       accessToken: createAccessToken()
     });
+
+    try {
+      await sendWelcomeRegistrationEmail(team);
+    } catch (error) {
+      console.error("Welcome registration email failed", error);
+    }
 
     const response = NextResponse.json({ redirectUrl: "/app" });
     response.cookies.set(leagueCookieName, team?.access_token ?? "", {
