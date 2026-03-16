@@ -171,8 +171,8 @@ export function SignupForm() {
         </div>
 
         <div className="rounded-2xl border border-border bg-secondary/80 p-4 text-sm text-muted-foreground">
-          Register your team, then pay the $40 fee through Venmo at $20 per player. Your payment
-          and requested timeslot will stay pending until an admin manually approves them.
+          <p>After registering, Venmo $40 to @theleague_uva and include your team name in the memo.</p>
+          <p className="mt-2">Your registration is confirmed once payment is received.</p>
         </div>
 
         {error ? (
