@@ -67,7 +67,7 @@ export default async function HomePage() {
             <div className="flex flex-1 items-center justify-center py-10">
               <div className="landing-hero-card relative w-full max-w-4xl text-center">
                 {earlyPricingActive ? (
-                  <div className="absolute left-1/2 top-20 z-10 w-[min(92%,24rem)] -translate-x-1/2 rounded-full border border-[rgba(245,132,79,0.28)] bg-[rgba(245,132,79,0.96)] px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-soft sm:top-24 sm:w-auto sm:px-5">
+                  <div className="mx-auto mb-4 w-[min(92%,24rem)] rounded-full border border-[rgba(245,132,79,0.28)] bg-[rgba(245,132,79,0.96)] px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-soft sm:mb-5 sm:w-auto sm:px-5">
                     Early pricing for the first 12 teams
                   </div>
                 ) : null}
@@ -110,7 +110,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-                  A UVA pickleball league with weekly matches, standings, playoffs, and a cash prize.
+                  A UVA pickleball league with weekly matches, playoffs, and a cash prize.
                   {earlyPricingActive ? (
                     <>
                       <span className="block text-center">
