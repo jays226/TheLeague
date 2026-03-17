@@ -71,9 +71,6 @@ export default async function HomePage() {
                     Early pricing for the first 12 teams
                   </div>
                 ) : null}
-                <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary/70">
-                  The League
-                </p>
                 <h1 className="mt-12 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:mt-14 sm:text-7xl lg:text-[6.5rem]">
                   The League
                 </h1>
