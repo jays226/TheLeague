@@ -112,6 +112,7 @@ export type CreateTeamInput = {
   playerTwoEmail: string;
   passwordHash: string;
   verificationStatus: string;
+  amountCents?: number;
   accessToken: string;
 };
 
@@ -238,7 +239,7 @@ export async function createTeam(input: CreateTeamInput) {
         access_token,
         created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', 4000, $9, now()
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', $9, $10, now()
       )
       RETURNING *
     `,
@@ -251,6 +252,7 @@ export async function createTeam(input: CreateTeamInput) {
       input.playerTwoEmail,
       input.passwordHash,
       input.verificationStatus,
+      input.amountCents ?? 4000,
       input.accessToken
     ]
   );

@@ -4,24 +4,28 @@ import Link from "next/link";
 import { RegistrationCountdown } from "@/components/registration-countdown";
 import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
-import { listSlots, type SlotRecord } from "@/lib/db";
+import { listSlots, listTeams, type SlotRecord } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   let slots: SlotRecord[] = [];
+  let approvedTeamCount = 0;
 
   try {
     slots = await listSlots();
+    const teams = await listTeams();
+    approvedTeamCount = teams.filter((team) => team.payment_status === "approved").length;
   } catch {
     // Leave the public marketing page available even if the database is temporarily unavailable.
     slots = [];
+    approvedTeamCount = 0;
   }
 
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
-  const totalFilled = slots.reduce((sum, slot) => sum + Number(slot.reserved_count), 0);
   const heroCapacity = totalCapacity || 24;
-  const heroFillPercent = Math.min((totalFilled / heroCapacity) * 100, 100);
+  const heroFillPercent = Math.min((approvedTeamCount / heroCapacity) * 100, 100);
+  const earlyPricingActive = approvedTeamCount < 12;
 
   return (
     <main className="relative overflow-hidden">
@@ -61,11 +65,16 @@ export default async function HomePage() {
             </header>
 
             <div className="flex flex-1 items-center justify-center py-10">
-              <div className="landing-hero-card w-full max-w-4xl text-center">
+              <div className="landing-hero-card relative w-full max-w-4xl text-center">
+                {earlyPricingActive ? (
+                  <div className="absolute left-1/2 top-20 z-10 w-[min(92%,24rem)] -translate-x-1/2 rounded-full border border-[rgba(245,132,79,0.28)] bg-[rgba(245,132,79,0.96)] px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-soft sm:top-24 sm:w-auto sm:px-5">
+                    Early pricing for the first 12 teams
+                  </div>
+                ) : null}
                 <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary/70">
                   The League
                 </p>
-                <h1 className="mt-6 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:text-7xl lg:text-[6.5rem]">
+                <h1 className="mt-12 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:mt-14 sm:text-7xl lg:text-[6.5rem]">
                   The League
                 </h1>
                 <RegistrationCountdown />
@@ -80,7 +89,7 @@ export default async function HomePage() {
                       </p>
                     </div>
                     <p className="text-2xl font-semibold tracking-[-0.04em] text-foreground">
-                      {totalFilled}/{heroCapacity}
+                      {approvedTeamCount}/{heroCapacity}
                     </p>
                   </div>
                   <div className="mt-4 h-3.5 overflow-hidden rounded-full bg-white/80 ring-1 ring-[rgba(32,116,74,0.08)]">
@@ -94,22 +103,33 @@ export default async function HomePage() {
                       {heroFillPercent.toFixed(0)}% full
                     </p>
                     <p className="text-muted-foreground">
-                      {heroCapacity - totalFilled > 0
-                        ? `${heroCapacity - totalFilled} spots still open`
+                      {heroCapacity - approvedTeamCount > 0
+                        ? `${heroCapacity - approvedTeamCount} spots still open`
                         : "The league is currently full"}
                     </p>
                   </div>
                 </div>
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-                  A UVA pickleball league with weekly matches, standings, and playoffs.
-                  <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
+                  A UVA pickleball league with weekly matches, standings, playoffs, and a cash prize.
+                  {earlyPricingActive ? (
+                    <>
+                      <span className="block text-center">
+                        <span className="line-through">$20</span> $15 per player
+                      </span>
+                      <span className="block text-center">
+                        Teams of 2 • <span className="line-through">$40</span> $30 total
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
+                  )}
                 </p>
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
                     className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-soft transition hover:bg-[hsl(151_58%_18%)]"
                     href="#register"
                   >
-                    Register for $20 per player
+                    {earlyPricingActive ? "Register Your Team" : "Register Your Team"}
                   </Link>
                   <Link
                     className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition hover:opacity-90"
@@ -152,19 +172,42 @@ export default async function HomePage() {
 
               <div className="parallax-panel parallax-panel-hero">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {[
-                    ["Prize", "$500+ for first place"],
-                    ["Fee", "$20 per player. Teams of 2 • $40 total."],
-                    ["Format", "Best two out of three games each week."],
-                    ["Season", "March 23 to April 27"]
-                  ].map(([title, body]) => (
-                    <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={title}>
-                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
-                        {title}
+                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      Prize
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">$500+ for first place</p>
+                  </div>
+                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      Fee
+                    </p>
+                    {earlyPricingActive ? (
+                      <p className="mt-3 text-lg font-semibold text-foreground">
+                        <span className="line-through">$20</span> $15 per player
+                        <br />
+                        Teams of 2 • <span className="line-through">$40</span> $30 total
                       </p>
-                      <p className="mt-3 text-lg font-semibold text-foreground">{body}</p>
-                    </div>
-                  ))}
+                    ) : (
+                      <p className="mt-3 text-lg font-semibold text-foreground">
+                        $20 per player • 2 players per team • $40 total
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      Format
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">
+                      Best two out of three games each week.
+                    </p>
+                  </div>
+                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      Season
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">March 23 to April 27</p>
+                  </div>
                 </div>
                 <div className="mt-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
@@ -242,7 +285,7 @@ export default async function HomePage() {
                     className="inline-flex min-w-44 items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
                     href="#register"
                   >
-                    Register for $20 per player
+                    {earlyPricingActive ? "Register Your Team" : "Register Your Team"}
                   </Link>
                   <Link
                     className="inline-flex min-w-44 items-center justify-center rounded-xl bg-white/70 px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-white/90"
@@ -278,10 +321,16 @@ export default async function HomePage() {
                         </p>
                       </div>
                       <div className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-                        $20/player
+                        {earlyPricingActive ? (
+                          <>
+                            <span className="line-through">$20</span> $15/player
+                          </>
+                        ) : (
+                          "$20/player"
+                        )}
                       </div>
                     </div>
-                    <SignupForm />
+                    <SignupForm earlyPricingActive={earlyPricingActive} />
                   </div>
                 </Card>
               </div>

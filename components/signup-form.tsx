@@ -15,7 +15,11 @@ const initialState = {
   password: ""
 };
 
-export function SignupForm() {
+export function SignupForm({
+  earlyPricingActive = false
+}: {
+  earlyPricingActive?: boolean;
+}) {
   const [form, setForm] = useState(initialState);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof initialState, string>>>(
@@ -171,7 +175,17 @@ export function SignupForm() {
         </div>
 
         <div className="rounded-2xl border border-border bg-secondary/80 p-4 text-sm text-muted-foreground">
-          <p>After registering, Venmo $40 to @theleague_uva and include your team name in the memo.</p>
+          <p>
+            After registering, Venmo{" "}
+            {earlyPricingActive ? (
+              <>
+                <span className="line-through">$40</span> $30
+              </>
+            ) : (
+              "$40"
+            )}{" "}
+            to @theleague_uva and include your team name in the memo.
+          </p>
           <p className="mt-2">Your registration is confirmed once payment is received.</p>
         </div>
 

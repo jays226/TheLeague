@@ -2,6 +2,7 @@ import "server-only";
 
 import type { TeamRecord } from "@/lib/db";
 import { env } from "@/lib/env";
+import { formatCurrency } from "@/lib/utils";
 
 async function getTransporter() {
   if (!env.smtpHost || !env.smtpPort || !env.smtpUser || !env.smtpPass || !env.smtpFrom) {
@@ -99,6 +100,8 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, one more step to enter The League`;
   const venmoLink = env.venmoLink || "https://venmo.com/u/theleague_uva";
+  const totalFee = formatCurrency(team.amount_cents);
+  const perPlayerFee = formatCurrency(team.amount_cents / 2);
 
   await transporter.sendMail({
     from: env.smtpFrom,
@@ -111,7 +114,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "There's just one final step to complete your entry.",
       "",
-      "Submit the team entry fee of $40 total ($20 per player) to activate your team and unlock access to select your weekly match time.",
+      `Submit the team entry fee of ${totalFee} total (${perPlayerFee} per player) to activate your team and unlock access to select your weekly match time.`,
       "",
       `Pay @theleague_uva here: ${venmoLink}`,
       "",
@@ -147,7 +150,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               There’s just one final step to complete your entry.
             </p>
             <p>
-              Submit the team entry fee of <strong>$40 total ($20 per player)</strong> to activate your team and unlock access to select your weekly match time.
+              Submit the team entry fee of <strong>${totalFee} total (${perPlayerFee} per player)</strong> to activate your team and unlock access to select your weekly match time.
             </p>
             <p>
               <strong>Pay <a href="${venmoLink}" style="color: #1d6042; text-decoration: none;">@theleague_uva</a></strong>

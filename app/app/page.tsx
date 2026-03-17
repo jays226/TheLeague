@@ -95,6 +95,9 @@ export default async function AppPage({
   const slots = (await listSlots()) as SlotRecord[];
   const stats = await getReservationStats();
   const groupedSlots = groupSlotsByDay(slots, activeReservation);
+  const perPlayerAmount = formatCurrency(team.amount_cents / 2);
+  const totalAmountWhole = `$${Math.round(team.amount_cents / 100)}`;
+  const perPlayerAmountWhole = `$${Math.round(team.amount_cents / 200)}`;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -163,7 +166,7 @@ export default async function AppPage({
               <p className="mt-2 text-xl font-semibold text-foreground">
                 {team.payment_status === "approved"
                   ? "Your team payment has been approved and your account is ready for scheduling."
-                  : "Pay $40 total, or $20 per player, as soon as you enter the portal."}
+                  : `Pay ${totalAmountWhole} total, or ${perPlayerAmountWhole} per player, as soon as you enter the portal.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {team.payment_status === "approved"
@@ -303,7 +306,7 @@ export default async function AppPage({
                   <p className="mt-2 text-2xl font-semibold text-foreground">
                     {formatCurrency(team.amount_cents)}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">$20 per player</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{perPlayerAmount} per player</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {team.payment_status === "approved"
                       ? "Venmo payment approved"
