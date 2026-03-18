@@ -76,7 +76,7 @@ export default async function HomePage() {
                         <span className="line-through text-muted-foreground">$20</span> → $15 per player
                       </span>
                       <span className="block text-center">Teams of 2 • $30 total</span>
-                      <span className="mt-1 block text-center text-sm font-medium uppercase tracking-[0.14em] text-primary/70">
+                      <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
                         Early pricing for the first 12 teams • {approvedTeamCount} claimed
                       </span>
                     </>
