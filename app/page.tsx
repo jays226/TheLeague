@@ -161,7 +161,7 @@ export default async function HomePage() {
                   <p>
                     Top teams advance to playoffs for a chance at the $500+ first-place prize.
                   </p>
-                  <p>Deadline: March 21. Play runs March 23 through April 27.</p>
+                  <p>Deadline: March 21. Play runs March 23 through April 24.</p>
                 </div>
               </Card>
 
