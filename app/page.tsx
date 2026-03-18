@@ -201,7 +201,7 @@ export default async function HomePage() {
                     <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
                       Season
                     </p>
-                    <p className="mt-3 text-lg font-semibold text-foreground">March 23 to April 27</p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">March 23 to April 24</p>
                   </div>
                 </div>
                 <div className="mt-5">
