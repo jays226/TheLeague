@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 import { hashPassword } from "@/lib/auth";
 import { createTeam, listTeams } from "@/lib/db";
-import { sendWelcomeRegistrationEmail } from "@/lib/email-notifications";
+import { sendAdminSignupAlert, sendWelcomeRegistrationEmail } from "@/lib/email-notifications";
 import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
 import { createAccessToken, createId, leagueCookieName } from "@/lib/session";
@@ -50,6 +50,12 @@ export async function POST(request: Request) {
       await sendWelcomeRegistrationEmail(team);
     } catch (error) {
       console.error("Welcome registration email failed", error);
+    }
+
+    try {
+      await sendAdminSignupAlert(team);
+    } catch (error) {
+      console.error("Admin signup alert failed", error);
     }
 
     const response = NextResponse.json({ redirectUrl: "/app" });

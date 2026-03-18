@@ -175,3 +175,37 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
     `
   });
 }
+
+export async function sendAdminSignupAlert(team: TeamRecord) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Admin signup alert skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  const adminRecipient = "bmt7uk@virginia.edu";
+  const subject = `New League signup: ${team.team_name}`;
+
+  await transporter.sendMail({
+    from: env.smtpFrom,
+    to: adminRecipient,
+    subject,
+    text: [
+      "A new team has signed up for The League.",
+      "",
+      `Team name: ${team.team_name}`,
+      `Player 1: ${team.player_one_name} (${team.player_one_email})`,
+      `Player 2: ${team.player_two_name} (${team.player_two_email})`
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
+        <h2 style="margin-bottom: 12px;">New League signup</h2>
+        <p>A new team has signed up for <strong>The League</strong>.</p>
+        <p><strong>Team name:</strong> ${team.team_name}</p>
+        <p><strong>Player 1:</strong> ${team.player_one_name} (${team.player_one_email})</p>
+        <p><strong>Player 2:</strong> ${team.player_two_name} (${team.player_two_email})</p>
+      </div>
+    `
+  });
+}
