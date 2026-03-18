@@ -66,14 +66,24 @@ export default async function HomePage() {
 
             <div className="flex flex-1 items-center justify-center py-10">
               <div className="landing-hero-card relative w-full max-w-4xl text-center">
-                {earlyPricingActive ? (
-                  <div className="mx-auto mb-4 w-[min(92%,24rem)] rounded-full border border-[rgba(245,132,79,0.28)] bg-[rgba(245,132,79,0.96)] px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-soft sm:mb-5 sm:w-auto sm:px-5">
-                    Early pricing for the first 12 teams
-                  </div>
-                ) : null}
                 <h1 className="mt-12 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:mt-14 sm:text-7xl lg:text-[6.5rem]">
                   The League
                 </h1>
+                <div className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+                  {earlyPricingActive ? (
+                    <>
+                      <span className="block text-center font-semibold text-foreground">
+                        <span className="line-through text-muted-foreground">$20</span> → $15 per player
+                      </span>
+                      <span className="block text-center">Teams of 2 • $30 total</span>
+                      <span className="mt-1 block text-center text-sm font-medium uppercase tracking-[0.14em] text-primary/70">
+                        Early pricing for the first 12 teams • {approvedTeamCount} claimed
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
+                  )}
+                </div>
                 <RegistrationCountdown />
                 <div className="mx-auto mt-6 w-full max-w-xl rounded-[28px] border border-[rgba(32,116,74,0.16)] bg-[linear-gradient(135deg,rgba(32,116,74,0.14),rgba(255,255,255,0.96))] px-5 py-5 shadow-soft">
                   <div className="flex items-center justify-between gap-3">
@@ -108,25 +118,13 @@ export default async function HomePage() {
                 </div>
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
                   A UVA pickleball league with weekly matches, playoffs, and a cash prize.
-                  {earlyPricingActive ? (
-                    <>
-                      <span className="block text-center">
-                        <span className="line-through">$20</span> $15 per player
-                      </span>
-                      <span className="block text-center">
-                        Teams of 2 • <span className="line-through">$40</span> $30 total
-                      </span>
-                    </>
-                  ) : (
-                    <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
-                  )}
                 </p>
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
                     className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-soft transition hover:bg-[hsl(151_58%_18%)]"
                     href="#register"
                   >
-                    {earlyPricingActive ? "Register Your Team" : "Register Your Team"}
+                    {earlyPricingActive ? "Claim Your Spot" : "Register Your Team"}
                   </Link>
                   <Link
                     className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition hover:opacity-90"
