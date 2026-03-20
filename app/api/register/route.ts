@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     await ensureNoExistingTeam(data);
     const teams = await listTeams();
     const approvedTeamCount = teams.filter((team) => team.payment_status === "approved").length;
-    const amountCents = approvedTeamCount <= 12 ? 3000 : 4000;
+    const amountCents = approvedTeamCount <= 16 ? 3000 : 4000;
 
     const verification = await verifyEmails([data.playerOneEmail, data.playerTwoEmail]);
 
