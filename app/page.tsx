@@ -77,7 +77,7 @@ export default async function HomePage() {
                       </span>
                       <span className="block text-center">Teams of 2 • $30 total</span>
                       <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
-                        Early pricing for the first 16 teams
+                        Early pricing for the first 16 teams • Only {Math.max(16 - approvedTeamCount, 0)} spots left
                       </span>
                     </>
                   ) : (
