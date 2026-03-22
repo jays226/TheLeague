@@ -73,11 +73,13 @@ export default async function HomePage() {
                   {earlyPricingActive ? (
                     <>
                       <span className="block text-center font-semibold text-foreground">
-                        <span className="line-through text-muted-foreground">$20</span> → $15 per player
+                        Final day pricing: $15 per player
                       </span>
-                      <span className="block text-center">Teams of 2 • $30 total</span>
+                      <span className="block text-center">
+                        <span className="line-through">$20</span> regular
+                      </span>
                       <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
-                        Early pricing for the first 16 teams • Only {Math.max(16 - approvedTeamCount, 0)} spots left
+                        Registration closes Thursday, March 26 at 11:59 PM
                       </span>
                     </>
                   ) : (
@@ -161,7 +163,7 @@ export default async function HomePage() {
                   <p>
                     Top teams advance to playoffs for a chance at the $500+ first-place prize.
                   </p>
-                  <p>Deadline: March 21. Play runs March 23 through April 24.</p>
+                  <p>Deadline: March 26. Play runs March 30 through April 28.</p>
                 </div>
               </Card>
 
@@ -201,7 +203,7 @@ export default async function HomePage() {
                     <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
                       Season
                     </p>
-                    <p className="mt-3 text-lg font-semibold text-foreground">March 23 to April 24</p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">March 30 to April 28</p>
                   </div>
                 </div>
                 <div className="mt-5">
@@ -309,7 +311,7 @@ export default async function HomePage() {
                           Register for The League
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          Registration closes Saturday, March 21, 2026 at 11:59 PM.
+                          Registration closes Thursday, March 26, 2026 at 11:59 PM.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
                           Add both players, create a team password, and complete payment to unlock slot selection.

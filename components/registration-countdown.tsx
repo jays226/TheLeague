@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const deadline = new Date("2026-03-21T23:59:00-04:00").getTime();
+const deadline = new Date("2026-03-26T23:59:00-04:00").getTime();
 
 function getTimeLeft() {
   const diff = Math.max(deadline - Date.now(), 0);
@@ -44,7 +44,7 @@ export function RegistrationCountdown() {
   return (
     <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-white/70 bg-white/72 px-4 py-4 text-center shadow-soft backdrop-blur sm:px-5">
       <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/65 sm:text-xs sm:tracking-[0.16em]">
-        Registration closes Saturday, March 21, 2026 at 11:59 PM
+        Registration closes Thursday, March 26, 2026 at 11:59 PM
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2 sm:gap-3">
         {[
