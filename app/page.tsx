@@ -73,13 +73,13 @@ export default async function HomePage() {
                   {earlyPricingActive ? (
                     <>
                       <span className="block text-center font-semibold text-foreground">
-                        Final day pricing: $15 per player
+                        Early pricing: $15 per player
                       </span>
                       <span className="block text-center">
                         <span className="line-through">$20</span> regular
                       </span>
                       <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
-                        Registration closes Thursday, March 26 at 11:59 PM
+                        First 16 teams get $15 per player
                       </span>
                     </>
                   ) : (
