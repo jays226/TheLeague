@@ -73,13 +73,13 @@ export default async function HomePage() {
                   {earlyPricingActive ? (
                     <>
                       <span className="block text-center font-semibold text-foreground">
-                        $15 per player (limited-time pricing)
+                        $15 per player
                       </span>
                       <span className="block text-center">
                         <span className="line-through">$20</span> regular
                       </span>
                       <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
-                        Limited-time pricing available now
+                        Limited-time pricing
                       </span>
                     </>
                   ) : (
