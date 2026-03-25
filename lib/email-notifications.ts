@@ -32,8 +32,6 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
 
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, your League entry is confirmed`;
-  const dashboardUrl = `${env.appUrl}/login`;
-
   await transporter.sendMail({
     from: env.smtpFrom,
     to: recipients.join(", "),
@@ -43,9 +41,9 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
       "",
       `Thanks for your payment. Your team ${team.team_name} is now officially entered in The League.`,
       "",
-      "You can now log in to your team dashboard to sign up for your weekly match time:",
+      "You can now log in to your team dashboard to sign up for your weekly match time.",
       "",
-      dashboardUrl,
+      "Visit theleagueuva.com and log in to your dashboard.",
       "",
       "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
       "",
@@ -67,9 +65,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
           You can now log in to your team dashboard to sign up for your weekly match time.
         </p>
         <p>
-          <a href="${dashboardUrl}" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#1d6042;color:#f7f2e9;text-decoration:none;font-weight:600;">
-            Open team dashboard
-          </a>
+          Visit <strong>theleagueuva.com</strong> and log in to your dashboard.
         </p>
         <p>
           Game locations, court assignments, and instructions for accessing your full schedule will be sent out on <strong>Sunday, March 29th</strong>.
