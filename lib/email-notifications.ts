@@ -47,7 +47,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
       "",
       dashboardUrl,
       "",
-      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 22nd.",
+      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
       "",
       "You can log in to your dashboard anytime to view updates, and we'll also send important announcements to this email.",
       "",
@@ -72,7 +72,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
           </a>
         </p>
         <p>
-          Game locations, court assignments, and instructions for accessing your full schedule will be sent out on <strong>Sunday, March 22nd</strong>.
+          Game locations, court assignments, and instructions for accessing your full schedule will be sent out on <strong>Sunday, March 29th</strong>.
         </p>
         <p>
           You can log in to your dashboard anytime to view updates, and we’ll also send important announcements to this email.
@@ -120,7 +120,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly time slot.",
       "",
-      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 22nd.",
+      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
       "",
       "You'll also be able to log in to your dashboard to view updates, and we'll continue sending important information to this email.",
       "",
@@ -161,7 +161,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly match time.
             </p>
             <p>
-              Game locations, court assignments, and instructions for accessing your schedule will be sent out on <strong>Sunday, March 22nd</strong>.
+              Game locations, court assignments, and instructions for accessing your schedule will be sent out on <strong>Sunday, March 29th</strong>.
             </p>
             <p>
               You can log in to your dashboard anytime to view updates, and we’ll also continue sending important information to this email.
