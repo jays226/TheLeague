@@ -184,12 +184,17 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
     return;
   }
 
-  const adminRecipient = "bmt7uk@virginia.edu";
+  const adminRecipients = [
+    "bmt7uk@virginia.edu",
+    "jww2fj@virginia.edu",
+    "fse7nq@virginia.edu",
+    "ysf6mf@virginia.edu"
+  ];
   const subject = `New League signup: ${team.team_name}`;
 
   await transporter.sendMail({
     from: env.smtpFrom,
-    to: adminRecipient,
+    to: adminRecipients.join(", "),
     subject,
     text: [
       "A new team has signed up for The League.",
