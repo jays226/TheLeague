@@ -28,3 +28,12 @@ export const loginSchema = z.object({
   teamName: z.string().trim().min(1, "Enter your team name."),
   password: z.string().min(1, "Enter your password.")
 });
+
+export const forgotPasswordSchema = z.object({
+  email: uvaEmail
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Missing reset token."),
+  password: z.string().min(6, "Use a password with at least 6 characters.").max(72)
+});

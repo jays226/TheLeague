@@ -58,6 +58,27 @@ async function ensureBootstrap() {
         CREATE INDEX IF NOT EXISTS idx_admin_login_attempts_created_at
         ON admin_login_attempts (created_at)
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          token_hash text PRIMARY KEY,
+          team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          email text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          expires_at timestamptz NOT NULL,
+          used_at timestamptz
+        )
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_team_id
+        ON password_reset_tokens (team_id)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
+        ON password_reset_tokens (expires_at)
+      `);
     })();
   }
 
@@ -147,6 +168,15 @@ export type AdminTeamRow = TeamRecord & {
   active_day_label: string | null;
   active_time_label: string | null;
   active_reservation_status: ReservationRecord["status"] | null;
+};
+
+type PasswordResetTokenRecord = {
+  token_hash: string;
+  team_id: string;
+  email: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
 };
 
 function normalizeTeam(row: TeamRecord): TeamRecord {
@@ -281,6 +311,22 @@ export async function getTeamByAccessToken(accessToken: string) {
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
+export async function getTeamByMemberEmail(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const rows = await query<TeamRecord>(
+    `
+      SELECT *
+      FROM teams
+      WHERE lower(player_one_email) = lower($1)
+         OR lower(player_two_email) = lower($1)
+      LIMIT 1
+    `,
+    [normalizedEmail]
+  );
+
+  return rows[0] ? normalizeTeam(rows[0]) : undefined;
+}
+
 export async function getExistingConflict(input: {
   teamName: string;
   playerOneEmail: string;
@@ -355,6 +401,73 @@ export async function approveTeamPayment(teamId: string) {
       WHERE id = $1
     `,
     [teamId]
+  );
+}
+
+export async function createPasswordReset(input: {
+  tokenHash: string;
+  teamId: string;
+  email: string;
+  expiresAt: Date;
+}) {
+  await query("DELETE FROM password_reset_tokens WHERE team_id = $1 OR email = $2", [
+    input.teamId,
+    input.email.toLowerCase()
+  ]);
+
+  await query(
+    `
+      INSERT INTO password_reset_tokens (
+        token_hash,
+        team_id,
+        email,
+        expires_at
+      ) VALUES ($1, $2, $3, $4)
+    `,
+    [input.tokenHash, input.teamId, input.email.toLowerCase(), input.expiresAt.toISOString()]
+  );
+}
+
+export async function getValidPasswordReset(tokenHash: string) {
+  const rows = await query<
+    PasswordResetTokenRecord & {
+      team_name: string;
+    }
+  >(
+    `
+      SELECT prt.*, t.team_name
+      FROM password_reset_tokens prt
+      JOIN teams t ON t.id = prt.team_id
+      WHERE prt.token_hash = $1
+        AND prt.used_at IS NULL
+        AND prt.expires_at > now()
+      LIMIT 1
+    `,
+    [tokenHash]
+  );
+
+  return rows[0];
+}
+
+export async function markPasswordResetUsed(tokenHash: string) {
+  await query(
+    `
+      UPDATE password_reset_tokens
+      SET used_at = now()
+      WHERE token_hash = $1
+    `,
+    [tokenHash]
+  );
+}
+
+export async function updateTeamPassword(teamId: string, passwordHash: string) {
+  await query(
+    `
+      UPDATE teams
+      SET password_hash = $2
+      WHERE id = $1
+    `,
+    [teamId, passwordHash]
   );
 }
 

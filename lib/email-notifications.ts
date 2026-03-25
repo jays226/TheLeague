@@ -214,3 +214,62 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
     `
   });
 }
+
+export async function sendPasswordResetEmail(input: {
+  team: TeamRecord;
+  recipientEmail: string;
+  resetUrl: string;
+}) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Password reset email skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  await transporter.sendMail({
+    from: env.smtpFrom,
+    to: input.recipientEmail,
+    subject: `${input.team.team_name} password reset`,
+    text: [
+      `Hi ${input.team.team_name},`,
+      "",
+      "We received a request to reset your team password for The League.",
+      "",
+      "Use the link below to choose a new password:",
+      input.resetUrl,
+      "",
+      "This link will expire in 1 hour.",
+      "",
+      "If you did not request this, you can ignore this email.",
+      "",
+      "The League"
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525; max-width: 640px; margin: 0 auto;">
+        <div style="border: 1px solid rgba(29,96,66,0.12); border-radius: 18px; overflow: hidden; background: #ffffff;">
+          <div style="padding: 24px 24px 12px; background: linear-gradient(180deg, #eef3ee 0%, #ffffff 100%);">
+            <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #4d6a5c; font-weight: 700;">
+              The League
+            </p>
+            <h2 style="margin: 0; font-size: 28px; line-height: 1.15; color: #173525;">
+              Reset your team password
+            </h2>
+          </div>
+          <div style="padding: 8px 24px 24px;">
+            <p>Hi <strong>${input.team.team_name}</strong>,</p>
+            <p>We received a request to reset your team password for <strong>The League</strong>.</p>
+            <p>
+              <a href="${input.resetUrl}" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#1d6042;color:#f7f2e9;text-decoration:none;font-weight:600;">
+                Reset team password
+              </a>
+            </p>
+            <p>This link will expire in <strong>1 hour</strong>.</p>
+            <p>If you did not request this, you can ignore this email.</p>
+            <p style="margin-top: 24px; font-weight: 600;">The League</p>
+          </div>
+        </div>
+      </div>
+    `
+  });
+}
