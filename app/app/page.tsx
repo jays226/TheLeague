@@ -126,7 +126,7 @@ export default async function AppPage({
             </div>
           </div>
           <div className="flex gap-3">
-            {team.payment_status === "approved" ? (
+            {team.payment_status === "approved" && !team.is_waitlist ? (
               <Link
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
                 href="/schedule"
@@ -153,7 +153,9 @@ export default async function AppPage({
 
         <Card
           className={
-            team.payment_status === "approved"
+            team.is_waitlist
+              ? "border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6"
+              : team.payment_status === "approved"
               ? "border-[rgba(32,116,74,0.18)] bg-[linear-gradient(135deg,rgba(32,116,74,0.14),rgba(255,255,255,0.94))] p-6"
               : "border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6"
           }
@@ -161,20 +163,32 @@ export default async function AppPage({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-                {team.payment_status === "approved" ? "Venmo payment accepted!" : "Venmo paywall"}
+                {team.is_waitlist
+                  ? "Waitlist status"
+                  : team.payment_status === "approved"
+                    ? "Venmo payment accepted!"
+                    : "Venmo paywall"}
               </p>
               <p className="mt-2 text-xl font-semibold text-foreground">
-                {team.payment_status === "approved"
+                {team.is_waitlist
+                  ? "Your team is on the waitlist. We will reach out if spots open."
+                  : team.payment_status === "approved"
                   ? "Your team payment has been approved and your account is ready for scheduling."
                   : `Pay ${totalAmountWhole} total, or ${perPlayerAmountWhole} per player, as soon as you enter the portal.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {team.payment_status === "approved"
+                {team.is_waitlist
+                  ? "You do not need to choose a slot right now. If room opens up, we will contact your team by email with next steps."
+                  : team.payment_status === "approved"
                   ? "You can view slots immediately below. Any future switch request will still need admin approval."
                   : "Send the payment to `@theleague_uva` and include your team name in the note so the admin can approve your account quickly."}
               </p>
             </div>
-            {team.payment_status === "approved" ? (
+            {team.is_waitlist ? (
+              <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-[hsl(22_78%_37%)] shadow-soft">
+                Waitlisted
+              </div>
+            ) : team.payment_status === "approved" ? (
               <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-primary shadow-soft">
                 Venmo payment accepted!
               </div>
@@ -203,27 +217,29 @@ export default async function AppPage({
           />
         ) : null}
 
-        <SummaryStats
-          stats={[
-            {
-              label: "Total slots",
-              value: String(stats.totalSlots),
-              hint: "Weekly recurring signup windows"
-            },
-            {
-              label: "Reservations",
-              value: String(stats.totalReservations),
-              hint: "Pending and approved teams"
-            },
-            {
-              label: "Available spots",
-              value: String(stats.availableSpots),
-              hint: "Remaining open capacity this week"
-            }
-          ]}
-        />
+        {!team.is_waitlist ? (
+          <>
+            <SummaryStats
+              stats={[
+                {
+                  label: "Total slots",
+                  value: String(stats.totalSlots),
+                  hint: "Weekly recurring signup windows"
+                },
+                {
+                  label: "Reservations",
+                  value: String(stats.totalReservations),
+                  hint: "Pending and approved teams"
+                },
+                {
+                  label: "Available spots",
+                  value: String(stats.availableSpots),
+                  hint: "Remaining open capacity this week"
+                }
+              ]}
+            />
 
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-5">
             {activeReservation ? (
               <ReservationBanner
@@ -355,7 +371,9 @@ export default async function AppPage({
               </div>
             </Card>
           </div>
-        </div>
+            </div>
+          </>
+        ) : null}
       </div>
     </main>
   );

@@ -20,6 +20,7 @@ import {
   purgeExpiredAdminSessions,
   recordAdminLoginFailure,
   rejectReservation,
+  setTeamWaitlistStatus,
   updateTeamByAdmin
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
@@ -105,7 +106,11 @@ export async function approveTeamPaymentAction(formData: FormData) {
 
   const teamAfter = await getTeamById(teamId);
 
-  if (teamBefore?.payment_status !== "approved" && teamAfter?.payment_status === "approved") {
+  if (
+    teamBefore?.payment_status !== "approved" &&
+    teamAfter?.payment_status === "approved" &&
+    !teamAfter?.is_waitlist
+  ) {
     try {
       await sendPaymentApprovedEmail(teamAfter);
     } catch (error) {
@@ -188,6 +193,16 @@ export async function moveTeamReservationAction(formData: FormData) {
   await requireAdmin();
   const slotId = String(formData.get("slotId") || "").trim();
   await moveTeamReservation(String(formData.get("teamId") || ""), slotId || null);
+  revalidatePath("/admin");
+  revalidatePath("/app");
+  revalidatePath("/");
+}
+
+export async function setTeamWaitlistAction(formData: FormData) {
+  await requireAdmin();
+  const teamId = String(formData.get("teamId") || "");
+  const isWaitlist = String(formData.get("isWaitlist") || "1") === "1";
+  await setTeamWaitlistStatus(teamId, isWaitlist);
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/");

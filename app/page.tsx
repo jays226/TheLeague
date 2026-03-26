@@ -26,6 +26,7 @@ export default async function HomePage() {
   const heroCapacity = totalCapacity || 24;
   const heroFillPercent = Math.min((approvedTeamCount / heroCapacity) * 100, 100);
   const earlyPricingActive = true;
+  const leagueIsFull = approvedTeamCount >= heroCapacity;
 
   return (
     <main className="relative overflow-hidden">
@@ -123,10 +124,14 @@ export default async function HomePage() {
                 </p>
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
-                    className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-soft transition hover:bg-[hsl(151_58%_18%)]"
+                    className={`inline-flex min-w-52 items-center justify-center rounded-2xl px-6 py-4 text-base font-semibold shadow-soft transition ${
+                      leagueIsFull
+                        ? "bg-[hsl(191_76%_48%)] text-white hover:bg-[hsl(191_76%_42%)]"
+                        : "bg-primary text-primary-foreground hover:bg-[hsl(151_58%_18%)]"
+                    }`}
                     href="#register"
                   >
-                    {earlyPricingActive ? "Claim Your Spot" : "Register Your Team"}
+                    {leagueIsFull ? "Join the Waitlist" : "Claim Your Spot"}
                   </Link>
                   <Link
                     className="inline-flex min-w-52 items-center justify-center rounded-2xl bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition hover:opacity-90"
@@ -279,10 +284,14 @@ export default async function HomePage() {
                 </div>
                 <div className="mt-6 flex flex-wrap gap-4">
                   <Link
-                    className="inline-flex min-w-44 items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                    className={`inline-flex min-w-44 items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                      leagueIsFull
+                        ? "bg-[hsl(191_76%_48%)] text-white hover:bg-[hsl(191_76%_42%)]"
+                        : "bg-primary text-primary-foreground hover:bg-[hsl(151_58%_18%)]"
+                    }`}
                     href="#register"
                   >
-                    {earlyPricingActive ? "Register Your Team" : "Register Your Team"}
+                    {leagueIsFull ? "Join the Waitlist" : "Register Your Team"}
                   </Link>
                   <Link
                     className="inline-flex min-w-44 items-center justify-center rounded-xl bg-white/70 px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-white/90"
@@ -314,7 +323,9 @@ export default async function HomePage() {
                           Registration closes Thursday, March 26, 2026 at 11:59 PM.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          Add both players, create a team password, and complete payment to unlock slot selection.
+                          {leagueIsFull
+                            ? "Add both players and create a team password to join the waitlist. We will reach out if spots open."
+                            : "Add both players, create a team password, and complete payment to unlock slot selection."}
                         </p>
                       </div>
                       <div className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
@@ -327,7 +338,7 @@ export default async function HomePage() {
                         )}
                       </div>
                     </div>
-                    <SignupForm earlyPricingActive={earlyPricingActive} />
+                    <SignupForm earlyPricingActive={earlyPricingActive} isWaitlistMode={leagueIsFull} />
                   </div>
                 </Card>
               </div>

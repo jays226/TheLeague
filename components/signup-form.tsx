@@ -16,9 +16,11 @@ const initialState = {
 };
 
 export function SignupForm({
-  earlyPricingActive = false
+  earlyPricingActive = false,
+  isWaitlistMode = false
 }: {
   earlyPricingActive?: boolean;
+  isWaitlistMode?: boolean;
 }) {
   const [form, setForm] = useState(initialState);
   const [error, setError] = useState<string | null>(null);
@@ -175,18 +177,27 @@ export function SignupForm({
         </div>
 
         <div className="rounded-2xl border border-border bg-secondary/80 p-4 text-sm text-muted-foreground">
-          <p>
-            After registering, Venmo{" "}
-            {earlyPricingActive ? (
-              <>
-                <span className="line-through">$40</span> $30
-              </>
-            ) : (
-              "$40"
-            )}{" "}
-            to @theleague_uva and include your team name in the memo.
-          </p>
-          <p className="mt-2">Your registration is confirmed once payment is received.</p>
+          {isWaitlistMode ? (
+            <>
+              <p>The league is currently full. Register here to join the waitlist.</p>
+              <p className="mt-2">If spots open, we will reach out to your team by email.</p>
+            </>
+          ) : (
+            <>
+              <p>
+                After registering, Venmo{" "}
+                {earlyPricingActive ? (
+                  <>
+                    <span className="line-through">$40</span> $30
+                  </>
+                ) : (
+                  "$40"
+                )}{" "}
+                to @theleague_uva and include your team name in the memo.
+              </p>
+              <p className="mt-2">Your registration is confirmed once payment is received.</p>
+            </>
+          )}
         </div>
 
         {error ? (
@@ -195,8 +206,18 @@ export function SignupForm({
           </div>
         ) : null}
 
-        <Button className="w-full" disabled={isPending} type="submit">
-          {isPending ? "Setting up your team..." : "Enter the league dashboard"}
+        <Button
+          className={isWaitlistMode ? "w-full bg-[hsl(191_76%_48%)] text-white hover:bg-[hsl(191_76%_42%)]" : "w-full"}
+          disabled={isPending}
+          type="submit"
+        >
+          {isPending
+            ? isWaitlistMode
+              ? "Adding your team to the waitlist..."
+              : "Setting up your team..."
+            : isWaitlistMode
+              ? "Join the waitlist"
+              : "Enter the league dashboard"}
         </Button>
       </form>
     </Card>

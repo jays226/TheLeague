@@ -99,6 +99,47 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
   const totalFee = formatCurrency(team.amount_cents);
   const perPlayerFee = formatCurrency(team.amount_cents / 2);
 
+  if (team.is_waitlist) {
+    await transporter.sendMail({
+      from: env.smtpFrom,
+      to: recipients.join(", "),
+      subject: `${team.team_name}, you're on The League waitlist`,
+      text: [
+        `Hi ${team.team_name},`,
+        "",
+        "Thanks for signing up for The League.",
+        "",
+        "The league is currently full, so your team has been added to the waitlist.",
+        "",
+        "If spots open, we will reach out to you by email with next steps.",
+        "",
+        "The League"
+      ].join("\n"),
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525; max-width: 640px; margin: 0 auto;">
+          <div style="border: 1px solid rgba(29,96,66,0.12); border-radius: 18px; overflow: hidden; background: #ffffff;">
+            <div style="padding: 24px 24px 12px; background: linear-gradient(180deg, #eef3ee 0%, #ffffff 100%);">
+              <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #4d6a5c; font-weight: 700;">
+                The League
+              </p>
+              <h2 style="margin: 0; font-size: 28px; line-height: 1.15; color: #173525;">
+                You're on the waitlist
+              </h2>
+            </div>
+            <div style="padding: 8px 24px 24px;">
+              <p>Hi <strong>${team.team_name}</strong>,</p>
+              <p>Thanks for signing up for <strong>The League</strong>.</p>
+              <p>The league is currently full, so your team has been added to the waitlist.</p>
+              <p>If spots open, we will reach out to you by email with next steps.</p>
+              <p style="margin-top: 24px; font-weight: 600;">The League</p>
+            </div>
+          </div>
+        </div>
+      `
+    });
+    return;
+  }
+
   await transporter.sendMail({
     from: env.smtpFrom,
     to: recipients.join(", "),

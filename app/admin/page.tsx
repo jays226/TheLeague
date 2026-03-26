@@ -9,6 +9,7 @@ import {
   moveTeamReservationAction,
   logoutAction,
   rejectReservationAction,
+  setTeamWaitlistAction,
   updateTeamAction
 } from "@/app/admin/actions";
 import { Badge } from "@/components/ui/badge";
@@ -210,6 +211,11 @@ export default async function AdminPage({
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
+                        {team.is_waitlist ? (
+                          <span className="rounded-full bg-[rgba(245,132,79,0.16)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_37%)]">
+                            Waitlist
+                          </span>
+                        ) : null}
                         {team.payment_status === "approved" ? (
                           <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
                             Approved
@@ -225,6 +231,16 @@ export default async function AdminPage({
                             </button>
                           </form>
                         )}
+                        <form action={setTeamWaitlistAction}>
+                          <input name="teamId" type="hidden" value={team.id} />
+                          <input name="isWaitlist" type="hidden" value={team.is_waitlist ? "0" : "1"} />
+                          <button
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-foreground transition hover:bg-[rgba(245,132,79,0.12)]"
+                            type="submit"
+                          >
+                            {team.is_waitlist ? "Remove waitlist" : "Add to waitlist"}
+                          </button>
+                        </form>
                         <form action={deleteTeamAction}>
                           <input name="teamId" type="hidden" value={team.id} />
                           <button

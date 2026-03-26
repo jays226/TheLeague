@@ -79,6 +79,11 @@ async function ensureBootstrap() {
         CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
         ON password_reset_tokens (expires_at)
       `);
+
+      await pool.query(`
+        ALTER TABLE teams
+        ADD COLUMN IF NOT EXISTS is_waitlist boolean NOT NULL DEFAULT false
+      `);
     })();
   }
 
@@ -119,6 +124,7 @@ export type TeamRecord = {
   verification_status: unknown;
   payment_status: "pending" | "approved";
   amount_cents: number;
+  is_waitlist: boolean;
   access_token: string | null;
   created_at: string;
   paid_at: string | null;
@@ -134,6 +140,7 @@ export type CreateTeamInput = {
   passwordHash: string;
   verificationStatus: string;
   amountCents?: number;
+  isWaitlist?: boolean;
   accessToken: string;
 };
 
@@ -182,7 +189,8 @@ type PasswordResetTokenRecord = {
 function normalizeTeam(row: TeamRecord): TeamRecord {
   return {
     ...row,
-    amount_cents: Number(row.amount_cents)
+    amount_cents: Number(row.amount_cents),
+    is_waitlist: Boolean(row.is_waitlist)
   };
 }
 
@@ -266,10 +274,11 @@ export async function createTeam(input: CreateTeamInput) {
         verification_status,
         payment_status,
         amount_cents,
+        is_waitlist,
         access_token,
         created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', $9, $10, now()
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', $9, $10, $11, now()
       )
       RETURNING *
     `,
@@ -283,6 +292,7 @@ export async function createTeam(input: CreateTeamInput) {
       input.passwordHash,
       input.verificationStatus,
       input.amountCents ?? 4000,
+      input.isWaitlist ?? false,
       input.accessToken
     ]
   );
@@ -402,6 +412,34 @@ export async function approveTeamPayment(teamId: string) {
     `,
     [teamId]
   );
+}
+
+export async function setTeamWaitlistStatus(teamId: string, isWaitlist: boolean) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `
+        UPDATE teams
+        SET is_waitlist = $2,
+            payment_status = CASE WHEN $2 THEN 'pending' ELSE payment_status END,
+            paid_at = CASE WHEN $2 THEN NULL ELSE paid_at END
+        WHERE id = $1
+      `,
+      [teamId, isWaitlist]
+    );
+
+    if (isWaitlist) {
+      await client.query(
+        `
+          UPDATE reservations
+          SET status = 'cancelled',
+              updated_at = now()
+          WHERE team_id = $1
+            AND status IN ('pending', 'approved')
+        `,
+        [teamId]
+      );
+    }
+  });
 }
 
 export async function createPasswordReset(input: {
@@ -711,6 +749,10 @@ export async function reserveSlot(input: { id: string; teamId: string; slotId: s
     throw new Error("Your team must be payment-approved before signing up for a slot.");
   }
 
+  if (team.is_waitlist) {
+    throw new Error("Your team is currently on the waitlist. We will reach out if spots open.");
+  }
+
   const slot = getSlotById(input.slotId);
 
   if (!slot) {
@@ -781,6 +823,10 @@ export async function moveTeamReservation(teamId: string, slotId: string | null)
 
   if (!team) {
     throw new Error("Team not found.");
+  }
+
+  if (team.is_waitlist) {
+    throw new Error("Waitlisted teams cannot hold a slot.");
   }
 
   const currentReservation = await getActiveReservationForTeam(teamId);

@@ -22,7 +22,7 @@ export default async function SchedulePage() {
     redirect("/");
   }
 
-  if (team.payment_status !== "approved") {
+  if (team.payment_status !== "approved" || team.is_waitlist) {
     redirect("/app");
   }
 

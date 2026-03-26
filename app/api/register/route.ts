@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { hashPassword } from "@/lib/auth";
-import { createTeam } from "@/lib/db";
+import { createTeam, listTeams } from "@/lib/db";
 import { sendAdminSignupAlert, sendWelcomeRegistrationEmail } from "@/lib/email-notifications";
 import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
@@ -15,6 +15,8 @@ export async function POST(request: Request) {
     const data = signupSchema.parse(rawData);
     await ensureNoExistingTeam(data);
     const amountCents = 3000;
+    const approvedTeamCount = (await listTeams()).filter((team) => team.payment_status === "approved").length;
+    const isWaitlist = approvedTeamCount >= 24;
 
     const verification = await verifyEmails([data.playerOneEmail, data.playerTwoEmail]);
 
@@ -37,6 +39,7 @@ export async function POST(request: Request) {
       passwordHash: hashPassword(data.password),
       verificationStatus: JSON.stringify(verification.results),
       amountCents,
+      isWaitlist,
       accessToken: createAccessToken()
     });
 
