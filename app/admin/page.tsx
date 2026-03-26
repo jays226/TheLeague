@@ -87,6 +87,9 @@ export default async function AdminPage({
   const slots = (await listSlots()) as SlotRecord[];
   const reservations = (await listAllReservations()) as ReservationRecord[];
   const stats = await getReservationStats();
+  const waitlistTeams = [...teams]
+    .filter((team) => team.is_waitlist)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -126,6 +129,47 @@ export default async function AdminPage({
             </Card>
           ))}
         </div>
+
+        <Card className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Waitlist order</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                {waitlistTeams.length === 0
+                  ? "No teams are currently on the waitlist."
+                  : `${waitlistTeams.length} team${waitlistTeams.length === 1 ? "" : "s"} on the waitlist`}
+              </p>
+            </div>
+            {waitlistTeams.length > 0 ? (
+              <span className="rounded-full bg-[rgba(245,132,79,0.16)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_37%)]">
+                Oldest to newest
+              </span>
+            ) : null}
+          </div>
+
+          {waitlistTeams.length > 0 ? (
+            <div className="mt-5 grid gap-3">
+              {waitlistTeams.map((team, index) => (
+                <div
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 p-4"
+                  key={team.id}
+                >
+                  <div>
+                    <p className="text-base font-semibold text-foreground">
+                      #{index + 1} {team.team_name}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {team.player_one_email} • {team.player_two_email}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Joined {new Date(team.created_at).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
 
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <Card className="p-6">
