@@ -43,7 +43,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
       "",
       "You can now log in to your team dashboard to sign up for your weekly match time.",
       "",
-      "Visit theleagueuva.com and log in to your dashboard.",
+      "Visit the website again and log in to your dashboard.",
       "",
       "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
       "",
@@ -65,7 +65,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
           You can now log in to your team dashboard to sign up for your weekly match time.
         </p>
         <p>
-          Visit <strong>theleagueuva.com</strong> and log in to your dashboard.
+          Visit the website again and log in to your dashboard.
         </p>
         <p>
           Game locations, court assignments, and instructions for accessing your full schedule will be sent out on <strong>Sunday, March 29th</strong>.
