@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const rawData = await request.json();
     const data = signupSchema.parse(rawData);
     await ensureNoExistingTeam(data);
-    const amountCents = 3000;
+    const amountCents = 4000;
     const approvedTeamCount = (await listTeams()).filter((team) => team.payment_status === "approved").length;
     const isWaitlist = approvedTeamCount >= 24;
 

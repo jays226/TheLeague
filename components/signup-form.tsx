@@ -16,10 +16,8 @@ const initialState = {
 };
 
 export function SignupForm({
-  earlyPricingActive = false,
   isWaitlistMode = false
 }: {
-  earlyPricingActive?: boolean;
   isWaitlistMode?: boolean;
 }) {
   const [form, setForm] = useState(initialState);
@@ -185,15 +183,8 @@ export function SignupForm({
           ) : (
             <>
               <p>
-                After registering, Venmo{" "}
-                {earlyPricingActive ? (
-                  <>
-                    <span className="line-through">$40</span> $30
-                  </>
-                ) : (
-                  "$40"
-                )}{" "}
-                to @theleague_uva and include your team name in the memo.
+                After registering, Venmo $40 to @theleague_uva and include your team name in the
+                memo.
               </p>
               <p className="mt-2">Your registration is confirmed once payment is received.</p>
             </>

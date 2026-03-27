@@ -25,7 +25,6 @@ export default async function HomePage() {
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const heroCapacity = totalCapacity || 24;
   const heroFillPercent = Math.min((approvedTeamCount / heroCapacity) * 100, 100);
-  const earlyPricingActive = true;
   const leagueIsFull = approvedTeamCount >= heroCapacity;
 
   return (
@@ -71,21 +70,7 @@ export default async function HomePage() {
                   The League
                 </h1>
                 <div className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-                  {earlyPricingActive ? (
-                    <>
-                      <span className="block text-center font-semibold text-foreground">
-                        $15 per player
-                      </span>
-                      <span className="block text-center">
-                        <span className="line-through">$20</span> regular
-                      </span>
-                      <span className="mt-1 block text-center text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(22_78%_52%)]">
-                        Limited-time pricing
-                      </span>
-                    </>
-                  ) : (
-                    <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
-                  )}
+                  <span className="block text-center">$20 per player • 2 players per team • $40 total</span>
                 </div>
                 <RegistrationCountdown />
                 <div className="mx-auto mt-6 w-full max-w-xl rounded-[28px] border border-[rgba(32,116,74,0.16)] bg-[linear-gradient(135deg,rgba(32,116,74,0.14),rgba(255,255,255,0.96))] px-5 py-5 shadow-soft">
@@ -184,17 +169,9 @@ export default async function HomePage() {
                     <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
                       Fee
                     </p>
-                    {earlyPricingActive ? (
-                      <p className="mt-3 text-lg font-semibold text-foreground">
-                        <span className="line-through">$20</span> $15 per player
-                        <br />
-                        Teams of 2 • <span className="line-through">$40</span> $30 total
-                      </p>
-                    ) : (
-                      <p className="mt-3 text-lg font-semibold text-foreground">
-                        $20 per player • 2 players per team • $40 total
-                      </p>
-                    )}
+                    <p className="mt-3 text-lg font-semibold text-foreground">
+                      $20 per player • 2 players per team • $40 total
+                    </p>
                   </div>
                   <div className="rounded-3xl bg-white/82 p-5 shadow-soft">
                     <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
@@ -329,16 +306,10 @@ export default async function HomePage() {
                         </p>
                       </div>
                       <div className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-                        {earlyPricingActive ? (
-                          <>
-                            <span className="line-through">$20</span> $15/player
-                          </>
-                        ) : (
-                          "$20/player"
-                        )}
+                        $20/player
                       </div>
                     </div>
-                    <SignupForm earlyPricingActive={earlyPricingActive} isWaitlistMode={leagueIsFull} />
+                    <SignupForm isWaitlistMode={leagueIsFull} />
                   </div>
                 </Card>
               </div>
