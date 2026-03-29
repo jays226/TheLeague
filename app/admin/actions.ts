@@ -20,6 +20,7 @@ import {
   purgeExpiredAdminSessions,
   recordAdminLoginFailure,
   rejectReservation,
+  saveLeagueGameResult,
   setTeamWaitlistStatus,
   updateTeamByAdmin
 } from "@/lib/db";
@@ -120,6 +121,7 @@ export async function approveTeamPaymentAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -128,6 +130,7 @@ export async function approveReservationAction(formData: FormData) {
   await approveReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -136,6 +139,7 @@ export async function rejectReservationAction(formData: FormData) {
   await rejectReservation(String(formData.get("reservationId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -178,6 +182,7 @@ export async function updateTeamAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -186,6 +191,7 @@ export async function deleteTeamAction(formData: FormData) {
   await deleteTeamByAdmin(String(formData.get("teamId") || ""));
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -195,6 +201,7 @@ export async function moveTeamReservationAction(formData: FormData) {
   await moveTeamReservation(String(formData.get("teamId") || ""), slotId || null);
   revalidatePath("/admin");
   revalidatePath("/app");
+  revalidatePath("/app/dashboard");
   revalidatePath("/");
 }
 
@@ -206,4 +213,22 @@ export async function setTeamWaitlistAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/");
+}
+
+export async function saveGameResultAction(formData: FormData) {
+  await requireAdmin();
+
+  await saveLeagueGameResult({
+    slotId: String(formData.get("slotId") || ""),
+    week: Number(formData.get("week") || 0),
+    matchDate: String(formData.get("matchDate") || ""),
+    homeTeamId: String(formData.get("homeTeamId") || ""),
+    awayTeamId: String(formData.get("awayTeamId") || ""),
+    winnerTeamId: String(formData.get("winnerTeamId") || "").trim() || null
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/app");
+  revalidatePath("/app/dashboard");
+  revalidatePath("/schedule");
 }

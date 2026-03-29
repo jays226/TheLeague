@@ -3,71 +3,41 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { logoutTeamAction, reserveSlotAction } from "@/app/app/actions";
+import { logoutTeamAction } from "@/app/app/actions";
 import { ReservationBanner } from "@/components/dashboard/reservation-banner";
-import { SlotCard } from "@/components/dashboard/slot-card";
-import { SummaryStats } from "@/components/dashboard/summary-stats";
+import { ScoreReportPanel } from "@/components/dashboard/score-report-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   getActiveReservationForTeam,
-  getPendingReservationForTeam,
-  getReservationStats,
   getTeamByAccessToken,
-  listReservationsForTeam,
-  listSlots,
-  type ReservationRecord,
-  type SlotRecord
+  listLeagueGamesForTeam,
+  listLeagueStandings,
+  listSlots
 } from "@/lib/db";
-import { env } from "@/lib/env";
-import { formatCurrency } from "@/lib/utils";
 import { leagueCookieName } from "@/lib/session";
+import { formatCurrency } from "@/lib/utils";
 
-function groupSlotsByDay(
-  slots: SlotRecord[],
-  activeReservation: Awaited<ReturnType<typeof getActiveReservationForTeam>>
-) {
-  const grouped = new Map<
-    string,
-    Array<{
-      id: string;
-      dayLabel: string;
-      timeLabel: string;
-      capacity: number;
-      reservedCount: number;
-      availableSpots: number;
-      isFull: boolean;
-      teams: string[];
-      status: "available" | "full" | "reserved";
-    }>
-  >();
+function getGameWindow(matchDate: string, timeLabel: string) {
+  const [time, meridiem] = timeLabel.split(" ");
+  const [rawHour, rawMinute] = time.split(":").map(Number);
+  let hour = rawHour % 12;
 
-  for (const slot of slots) {
-    const status =
-      activeReservation?.slot_id === slot.id
-        ? "reserved"
-        : slot.is_full
-          ? "full"
-          : "available";
-
-    const entry = {
-      id: slot.id,
-      dayLabel: slot.day_label,
-      timeLabel: slot.time_label,
-      capacity: slot.capacity,
-      reservedCount: Number(slot.reserved_count),
-      availableSpots: Number(slot.available_spots),
-      isFull: Boolean(slot.is_full),
-      teams: slot.teams,
-      status
-    } as const;
-
-    const current = grouped.get(slot.day_label) || [];
-    current.push(entry);
-    grouped.set(slot.day_label, current);
+  if (meridiem === "PM") {
+    hour += 12;
   }
 
-  return Array.from(grouped.entries());
+  const isoHour = String(hour).padStart(2, "0");
+  const isoMinute = String(rawMinute).padStart(2, "0");
+
+  return {
+    opensAt: new Date(`${matchDate}T${isoHour}:${isoMinute}:00-04:00`),
+    closesAt: new Date(`${matchDate}T23:59:59-04:00`)
+  };
+}
+
+function getCurrentPortalTime() {
+  return new Date();
 }
 
 export default async function AppPage({
@@ -90,14 +60,41 @@ export default async function AppPage({
   }
 
   const activeReservation = await getActiveReservationForTeam(team.id);
-  const pendingReservation = await getPendingReservationForTeam(team.id);
-  const reservationHistory = (await listReservationsForTeam(team.id)) as ReservationRecord[];
-  const slots = (await listSlots()) as SlotRecord[];
-  const stats = await getReservationStats();
-  const groupedSlots = groupSlotsByDay(slots, activeReservation);
-  const perPlayerAmount = formatCurrency(team.amount_cents / 2);
-  const totalAmountWhole = `$${Math.round(team.amount_cents / 100)}`;
-  const perPlayerAmountWhole = `$${Math.round(team.amount_cents / 200)}`;
+  const slots = await listSlots();
+  const activeSlot = activeReservation ? slots.find((slot) => slot.id === activeReservation.slot_id) : undefined;
+  const teamSchedule = await listLeagueGamesForTeam(team.id);
+  const standings = await listLeagueStandings();
+  const currentSlotStandings = activeReservation
+    ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
+    : undefined;
+  const now = getCurrentPortalTime();
+  const decoratedSchedule = teamSchedule
+    .map((game) => {
+      const { opensAt, closesAt } = getGameWindow(game.matchDate, game.timeLabel);
+      const teamSubmission = game.submissions.find((submission) => submission.submitting_team_id === team.id);
+      const opponentSubmission = game.submissions.find(
+        (submission) => submission.submitting_team_id !== team.id
+      );
+
+      return {
+        ...game,
+        opensAt,
+        closesAt,
+        canSubmitNow: now >= opensAt && now <= closesAt,
+        teamSubmission,
+        opponentSubmission
+      };
+    })
+    .sort((left, right) => {
+      const leftTime = left.opensAt.getTime();
+      const rightTime = right.opensAt.getTime();
+      return leftTime - rightTime;
+    });
+  const reportableGames = decoratedSchedule.filter((game) => game.canSubmitNow);
+  const currentMatchup =
+    reportableGames[0] ??
+    decoratedSchedule.find((game) => game.closesAt >= now && !game.winnerTeamId) ??
+    decoratedSchedule[0];
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -115,25 +112,23 @@ export default async function AppPage({
               />
             </div>
             <div>
-              <Badge>Dashboard</Badge>
+              <Badge>Schedule</Badge>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-foreground">
                 {team.team_name}
               </h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-                Track payment status, view the weekly slot board, and manage your team&apos;s one
-                active reservation from a single dashboard.
+                This is now your main portal page: see your weekly matchups, your current slot, and
+                standings across every time slot in one place.
               </p>
             </div>
           </div>
           <div className="flex gap-3">
-            {team.payment_status === "approved" && !team.is_waitlist ? (
-              <Link
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
-                href="/schedule"
-              >
-                Schedule
-              </Link>
-            ) : null}
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
+              href="/app/dashboard"
+            >
+              Dashboard
+            </Link>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
               href="/"
@@ -151,64 +146,6 @@ export default async function AppPage({
           </div>
         </header>
 
-        <Card
-          className={
-            team.is_waitlist
-              ? "border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6"
-              : team.payment_status === "approved"
-              ? "border-[rgba(32,116,74,0.18)] bg-[linear-gradient(135deg,rgba(32,116,74,0.14),rgba(255,255,255,0.94))] p-6"
-              : "border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6"
-          }
-        >
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-                {team.is_waitlist
-                  ? "Waitlist status"
-                  : team.payment_status === "approved"
-                    ? "Venmo payment accepted!"
-                    : "Venmo paywall"}
-              </p>
-              <p className="mt-2 text-xl font-semibold text-foreground">
-                {team.is_waitlist
-                  ? "Your team is on the waitlist. We will reach out if spots open."
-                  : team.payment_status === "approved"
-                  ? "Your team payment has been approved and your account is ready for scheduling."
-                  : `Pay ${totalAmountWhole} total, or ${perPlayerAmountWhole} per player, as soon as you enter the portal.`}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {team.is_waitlist
-                  ? "You do not need to choose a slot right now. If room opens up, we will contact your team by email with next steps."
-                  : team.payment_status === "approved"
-                  ? "You can view slots immediately below. Any future switch request will still need admin approval."
-                  : "Send the payment to `@theleague_uva` and include your team name in the note so the admin can approve your account quickly."}
-              </p>
-            </div>
-            {team.is_waitlist ? (
-              <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-[hsl(22_78%_37%)] shadow-soft">
-                Waitlisted
-              </div>
-            ) : team.payment_status === "approved" ? (
-              <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-primary shadow-soft">
-                Venmo payment accepted!
-              </div>
-            ) : env.venmoLink ? (
-              <a
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-                href={env.venmoLink}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open Venmo link
-              </a>
-            ) : (
-              <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-muted-foreground">
-                Add `NEXT_PUBLIC_VENMO_LINK` in `.env.local`.
-              </div>
-            )}
-          </div>
-        </Card>
-
         {params.message ? (
           <ReservationBanner
             body={params.message}
@@ -217,163 +154,331 @@ export default async function AppPage({
           />
         ) : null}
 
-        {!team.is_waitlist ? (
+        {team.is_waitlist ? (
+          <Card className="border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6">
+            <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Waitlist status</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+              Your team is currently on the waitlist.
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+              You will not see a weekly schedule until a spot opens. We&apos;ll reach out by email if
+              your team can be moved into the league.
+            </p>
+          </Card>
+        ) : team.payment_status !== "approved" ? (
+          <Card className="border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6">
+            <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Payment status</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+              Your schedule unlocks after payment is approved.
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+              Your team fee is {formatCurrency(team.amount_cents)} total. Once payment is approved,
+              return here to see your slot and weekly league schedule.
+            </p>
+          </Card>
+        ) : !activeReservation ? (
+          <Card className="p-6">
+            <p className="text-sm uppercase tracking-[0.16em] text-primary/65">No slot selected</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+              Choose a weekly time slot to unlock your match schedule.
+            </h2>
+            <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+              Your team is approved, but you still need to claim a weekly time slot. Head to the
+              dashboard tab to pick an open slot or request a switch later.
+            </p>
+          </Card>
+        ) : (
           <>
-            <SummaryStats
-              stats={[
-                {
-                  label: "Total slots",
-                  value: String(stats.totalSlots),
-                  hint: "Weekly recurring signup windows"
-                },
-                {
-                  label: "Reservations",
-                  value: String(stats.totalReservations),
-                  hint: "Pending and approved teams"
-                },
-                {
-                  label: "Available spots",
-                  value: String(stats.availableSpots),
-                  hint: "Remaining open capacity this week"
-                }
-              ]}
-            />
+            <Card className="p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
+                    Current matchup
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+                    {currentMatchup
+                      ? `vs ${
+                          currentMatchup.homeTeamId === team.id
+                            ? currentMatchup.awayTeamName
+                            : currentMatchup.homeTeamName
+                        }`
+                      : "Your next league matchup will appear here"}
+                  </h2>
+                </div>
+                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  Opens at match time, closes at midnight
+                </span>
+              </div>
 
-            <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-5">
-            {activeReservation ? (
-              <ReservationBanner
-                body={`${activeReservation.day_label} at ${activeReservation.time_label} is your current confirmed slot.`}
-                title="Current selected slot"
-                tone="success"
-              />
-            ) : (
-              <ReservationBanner
-                body="You do not have an active slot yet. Choose an open card below to sign up."
-                title="No current reservation"
-              />
-            )}
+              {currentMatchup ? (
+                <div className="mt-5 rounded-3xl bg-white/82 p-5 shadow-soft">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/65">
+                        Week {currentMatchup.week}
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-foreground">
+                        {currentMatchup.homeTeamName} vs {currentMatchup.awayTeamName}
+                      </p>
+                    </div>
+                    {currentMatchup.teamSubmission ? (
+                      <div className="rounded-2xl bg-secondary/80 px-4 py-3 text-sm text-foreground">
+                        You submitted{" "}
+                        <span className="font-semibold">
+                          {currentMatchup.teamSubmission.home_team_wins}-
+                          {currentMatchup.teamSubmission.away_team_wins}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
 
-            {pendingReservation ? (
-              <ReservationBanner
-                body={`${pendingReservation.day_label} at ${pendingReservation.time_label} is waiting for admin approval as your requested switch.`}
-                title="Pending change request"
-                tone="warning"
-              />
-            ) : null}
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-border/70 bg-secondary/55 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                        Date and time
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">{currentMatchup.dateLabel}</p>
+                    </div>
+                    {currentMatchup.locationLabel ? (
+                      <div className="rounded-2xl border border-border/70 bg-secondary/55 px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                          Location
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {currentMatchup.locationLabel}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
 
-            {groupedSlots.map(([day, daySlots]) => (
-              <Card className="p-6" key={day}>
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    {currentMatchup.canSubmitNow
+                      ? "Score reporting is open for this matchup until 11:59 PM tonight."
+                      : "The Log score button will activate when your match time begins."}
+                  </p>
+
+                  <ScoreReportPanel
+                    awayTeamId={currentMatchup.awayTeamId}
+                    awayTeamName={currentMatchup.awayTeamName}
+                    awayTeamWins={currentMatchup.teamSubmission?.away_team_wins ?? null}
+                    homeTeamId={currentMatchup.homeTeamId}
+                    homeTeamName={currentMatchup.homeTeamName}
+                    homeTeamWins={currentMatchup.teamSubmission?.home_team_wins ?? null}
+                    isOpen={currentMatchup.canSubmitNow}
+                    matchDate={currentMatchup.matchDate}
+                    slotId={currentMatchup.slotId}
+                    teamSubmissionWinnerTeamId={currentMatchup.teamSubmission?.winner_team_id ?? null}
+                    timeLabel={currentMatchup.timeLabel}
+                    week={currentMatchup.week}
+                  />
+
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {currentMatchup.opponentSubmission
+                      ? "The other team has also submitted a result. If both reports match, standings update automatically."
+                      : "Once the other team submits the same result, standings will update automatically."}
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
+                  Your current matchup will appear here once your weekly schedule is generated.
+                </div>
+              )}
+            </Card>
+
+            <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+              <Card className="p-6">
+                <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Current slot</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                  {activeReservation.day_label} • {activeReservation.time_label}
+                </h2>
+                <p className="mt-3 text-base leading-7 text-muted-foreground">
+                  Season runs from Monday, March 30 through Wednesday, April 22. You&apos;ll play four
+                  weekly matches inside this slot.
+                </p>
+                <div className="mt-6 rounded-2xl bg-white/80 p-4">
+                  <p className="text-sm text-muted-foreground">Teams in your slot</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(activeSlot?.teams || []).map((slotTeam) => (
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-medium ${
+                          slotTeam === team.team_name
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-foreground"
+                        }`}
+                        key={slotTeam}
+                      >
+                        {slotTeam}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Quick notes</p>
+                <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
+                  <p>Each weekly matchup is best two out of three games.</p>
+                  <p>
+                    Opponents are pulled from the teams in your reserved time slot and locked into a
+                    season rotation.
+                  </p>
+                  <p>
+                    The fourth week repeats an earlier matchup so every team still plays four total
+                    league games.
+                  </p>
+                </div>
+              </Card>
+            </div>
+
+            {currentSlotStandings ? (
+              <Card className="p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-                      Weekly schedule
+                      Your slot standings
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-                      {day}
+                      {currentSlotStandings.label}
                     </h2>
                   </div>
                   <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    {daySlots.length} slots
+                    Sorted by percentage
                   </span>
                 </div>
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {daySlots.map((slot: (typeof daySlots)[number]) => (
-                    <SlotCard
-                      action={reserveSlotAction}
-                      buttonLabel={
-                        team.payment_status !== "approved"
-                          ? "Await payment approval"
-                          : slot.status === "reserved"
-                            ? "Currently reserved"
-                            : activeReservation
-                              ? pendingReservation
-                                ? "Change pending"
-                                : "Request switch"
-                              : "Sign up"
-                      }
-                      disabled={
-                        team.payment_status !== "approved" ||
-                        slot.status === "reserved" ||
-                        slot.status === "full" ||
-                        Boolean(pendingReservation)
-                      }
-                      confirmMessage={
-                        !activeReservation
-                          ? "Are you sure you want to sign up? You must request to change to a different slot later."
-                          : undefined
-                      }
-                      key={slot.id}
-                      slot={slot}
-                      status={slot.status}
-                    />
+
+                <div className="mt-5 overflow-hidden rounded-2xl border border-border/70">
+                  <div className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
+                    <span>Team</span>
+                    <span>W</span>
+                    <span>L</span>
+                    <span>Pct</span>
+                  </div>
+                  {currentSlotStandings.teams.map((entry) => (
+                    <div
+                      className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] border-t border-border/60 px-4 py-3 text-sm text-foreground"
+                      key={`${currentSlotStandings.slotId}-${entry.teamName}`}
+                    >
+                      <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>
+                        {entry.teamName}
+                      </span>
+                      <span>{entry.wins}</span>
+                      <span>{entry.losses}</span>
+                      <span>{entry.percentage.toFixed(3)}</span>
+                    </div>
                   ))}
                 </div>
               </Card>
-            ))}
-          </div>
+            ) : null}
 
-          <div className="space-y-5">
             <Card className="p-6">
-              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Team status</p>
-              <div className="mt-5 space-y-4">
-                <div className="rounded-2xl bg-white/80 p-4">
-                  <p className="text-sm text-muted-foreground">League fee</p>
-                  <p className="mt-2 text-2xl font-semibold text-foreground">
-                    {formatCurrency(team.amount_cents)}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
+                    Weekly schedule
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{perPlayerAmount} per player</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {team.payment_status === "approved"
-                      ? "Venmo payment approved"
-                      : "Venmo payment pending admin review"}
-                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+                    Your four league matchups
+                  </h2>
                 </div>
-                <div className="rounded-2xl bg-white/80 p-4">
-                  <p className="text-sm text-muted-foreground">Upcoming game</p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">
-                    {activeReservation
-                      ? `${activeReservation.day_label} at ${activeReservation.time_label}`
-                      : "No upcoming slot booked"}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {activeReservation
-                      ? "Status: approved"
-                      : "Select a slot once your team payment is approved."}
-                  </p>
-                </div>
+                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  {teamSchedule.length} games
+                </span>
               </div>
-            </Card>
 
-            <Card className="p-6">
-              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-                Reservation history
-              </p>
-              <div className="mt-5 space-y-3">
-                {reservationHistory.length === 0 ? (
-                  <div className="rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
-                    No reservation activity yet.
-                  </div>
-                ) : (
-                  reservationHistory.map((reservation: ReservationRecord) => (
-                    <div className="rounded-2xl bg-white/80 p-4" key={reservation.id}>
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">
-                          {reservation.day_label} at {reservation.time_label}
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {teamSchedule.map((game) => (
+                  <div
+                    className="rounded-3xl bg-white/82 p-5 shadow-soft"
+                    key={`${game.week}-${game.homeTeamId}-${game.awayTeamId}`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      Week {game.week}
+                    </p>
+                    <p className="mt-3 text-xl font-semibold text-foreground">
+                      vs {game.homeTeamId === team.id ? game.awayTeamName : game.homeTeamName}
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                          Date and time
                         </p>
-                        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                          {reservation.status}
-                        </span>
+                        <p className="mt-1 text-sm text-muted-foreground">{game.dateLabel}</p>
                       </div>
+                      {game.locationLabel ? (
+                        <div className="rounded-2xl border border-border/70 bg-secondary/55 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                            Location
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{game.locationLabel}</p>
+                        </div>
+                      ) : null}
                     </div>
-                  ))
-                )}
+                    <p className="mt-4 text-sm font-medium text-primary">
+                      {game.winnerTeamId
+                        ? `Recorded result: ${
+                            game.homeTeamWins !== null && game.awayTeamWins !== null
+                              ? `${game.homeTeamWins}-${game.awayTeamWins}`
+                              : game.winnerTeamId === team.id
+                                ? "Win"
+                                : "Loss"
+                          }`
+                        : "Awaiting result"}
+                    </p>
+                  </div>
+                ))}
               </div>
             </Card>
-          </div>
-            </div>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Standings</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+                    All slot standings
+                  </h2>
+                </div>
+                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  Sorted by percentage
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Standings update as match results are recorded. Ties in percentage are broken by wins,
+                then alphabetically.
+              </p>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                {standings.map((slotStanding) => (
+                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={slotStanding.slotId}>
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
+                      {slotStanding.label}
+                    </p>
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-border/70">
+                      <div className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
+                        <span>Team</span>
+                        <span>W</span>
+                        <span>L</span>
+                        <span>Pct</span>
+                      </div>
+                      {slotStanding.teams.map((entry) => (
+                        <div
+                          className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] border-t border-border/60 px-4 py-3 text-sm text-foreground"
+                          key={`${slotStanding.slotId}-${entry.teamName}`}
+                        >
+                          <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>
+                            {entry.teamName}
+                          </span>
+                          <span>{entry.wins}</span>
+                          <span>{entry.losses}</span>
+                          <span>{entry.percentage.toFixed(3)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </>
-        ) : null}
+        )}
       </div>
     </main>
   );

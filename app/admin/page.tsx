@@ -9,6 +9,7 @@ import {
   moveTeamReservationAction,
   logoutAction,
   rejectReservationAction,
+  saveGameResultAction,
   setTeamWaitlistAction,
   updateTeamAction
 } from "@/app/admin/actions";
@@ -17,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import {
   type AdminTeamRow,
   getAdminSession,
+  listLeagueGames,
   getReservationStats,
   listAllReservations,
   listSlots,
@@ -86,6 +88,7 @@ export default async function AdminPage({
   const teams = (await listTeamsWithReservations()) as AdminTeamRow[];
   const slots = (await listSlots()) as SlotRecord[];
   const reservations = (await listAllReservations()) as ReservationRecord[];
+  const leagueGames = await listLeagueGames();
   const stats = await getReservationStats();
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
@@ -447,6 +450,57 @@ export default async function AdminPage({
                         {reservation.status}
                       </span>
                     )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Game results</p>
+          <div className="mt-5 space-y-3">
+            {leagueGames.length === 0 ? (
+              <div className="rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
+                Schedule data will appear here once teams hold approved slots.
+              </div>
+            ) : (
+              leagueGames.map((game) => (
+                <div className="rounded-2xl bg-white/80 p-4" key={`${game.slotId}-${game.week}-${game.homeTeamId}-${game.awayTeamId}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Week {game.week} • {game.dayLabel} at {game.timeLabel}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {game.dateLabel}
+                      </p>
+                      <p className="mt-2 text-base font-medium text-foreground">
+                        {game.homeTeamName} vs {game.awayTeamName}
+                      </p>
+                    </div>
+                    <form action={saveGameResultAction} className="flex flex-wrap items-center gap-3">
+                      <input name="slotId" type="hidden" value={game.slotId} />
+                      <input name="week" type="hidden" value={String(game.week)} />
+                      <input name="matchDate" type="hidden" value={game.matchDate} />
+                      <input name="homeTeamId" type="hidden" value={game.homeTeamId} />
+                      <input name="awayTeamId" type="hidden" value={game.awayTeamId} />
+                      <select
+                        className="h-11 min-w-56 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                        defaultValue={game.winnerTeamId ?? ""}
+                        name="winnerTeamId"
+                      >
+                        <option value="">No result recorded</option>
+                        <option value={game.homeTeamId}>{game.homeTeamName}</option>
+                        <option value={game.awayTeamId}>{game.awayTeamName}</option>
+                      </select>
+                      <button
+                        className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                        type="submit"
+                      >
+                        Save result
+                      </button>
+                    </form>
                   </div>
                 </div>
               ))

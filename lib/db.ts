@@ -3,6 +3,14 @@ import "server-only";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 import { env } from "@/lib/env";
+import {
+  buildStandingsFromGames,
+  generateSlotSchedule,
+  type GeneratedLeagueGame,
+  type LeagueGameWithResult,
+  type SlotStandings,
+  type SlotTeam
+} from "@/lib/league-schedule";
 import { recurringSlots } from "@/lib/slots";
 
 if (!env.databaseUrl) {
@@ -78,6 +86,156 @@ async function ensureBootstrap() {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
         ON password_reset_tokens (expires_at)
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS league_games (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          slot_id text NOT NULL,
+          day_label text NOT NULL,
+          time_label text NOT NULL,
+          week integer NOT NULL,
+          match_date date NOT NULL,
+          date_label text NOT NULL,
+          location_label text,
+          home_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          away_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS day_label text
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS time_label text
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS week integer
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS match_date date
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS date_label text
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS location_label text
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS home_team_id uuid REFERENCES teams(id) ON DELETE CASCADE
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS away_team_id uuid REFERENCES teams(id) ON DELETE CASCADE
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now()
+      `);
+
+      await pool.query(`
+        ALTER TABLE league_games
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_league_games_unique_matchup
+        ON league_games (slot_id, week, home_team_id, away_team_id)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_league_games_match_date
+        ON league_games (match_date, time_label)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_league_games_slot_id
+        ON league_games (slot_id)
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS game_results (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          slot_id text NOT NULL,
+          week integer NOT NULL,
+          match_date date NOT NULL,
+          home_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          away_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          winner_team_id uuid REFERENCES teams(id) ON DELETE SET NULL,
+          home_team_wins integer,
+          away_team_wins integer,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_results
+        ADD COLUMN IF NOT EXISTS home_team_wins integer
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_results
+        ADD COLUMN IF NOT EXISTS away_team_wins integer
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS game_result_submissions (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          slot_id text NOT NULL,
+          week integer NOT NULL,
+          match_date date NOT NULL,
+          home_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          away_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          submitting_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          winner_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          home_team_wins integer NOT NULL,
+          away_team_wins integer NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_game_result_submissions_unique_team
+        ON game_result_submissions (slot_id, week, home_team_id, away_team_id, submitting_team_id)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_game_result_submissions_slot_id
+        ON game_result_submissions (slot_id)
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_game_results_unique_matchup
+        ON game_results (slot_id, week, home_team_id, away_team_id)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_game_results_slot_id
+        ON game_results (slot_id)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_game_results_winner_team_id
+        ON game_results (winner_team_id)
       `);
 
       await pool.query(`
@@ -168,6 +326,59 @@ export type ReservationRecord = {
   day_label?: string;
   time_label?: string;
   capacity?: number;
+};
+
+export type LeagueGameResultRecord = {
+  id: string;
+  slot_id: string;
+  week: number;
+  match_date: string;
+  home_team_id: string;
+  away_team_id: string;
+  winner_team_id: string | null;
+  home_team_wins: number | null;
+  away_team_wins: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type LeagueGameStoredRecord = {
+  id: string;
+  slot_id: string;
+  day_label: string;
+  time_label: string;
+  week: number;
+  match_date: string;
+  date_label: string;
+  location_label: string | null;
+  home_team_id: string;
+  home_team_name: string;
+  away_team_id: string;
+  away_team_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeagueGameSubmissionRecord = {
+  id: string;
+  slot_id: string;
+  week: number;
+  match_date: string;
+  home_team_id: string;
+  away_team_id: string;
+  submitting_team_id: string;
+  winner_team_id: string;
+  home_team_wins: number;
+  away_team_wins: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeagueGameRecord = LeagueGameWithResult & {
+  id?: string;
+  homeTeamWins: number | null;
+  awayTeamWins: number | null;
+  submissions: LeagueGameSubmissionRecord[];
 };
 
 export type AdminTeamRow = TeamRecord & {
@@ -621,6 +832,164 @@ export async function listApprovedTeamsForSlot(slotId: string) {
   );
 }
 
+async function listApprovedSlotTeamsDetailed(slotId: string) {
+  return query<{ id: string; team_name: string }>(
+    `
+      SELECT t.id, t.team_name
+      FROM reservations r
+      JOIN teams t ON t.id = r.team_id
+      WHERE r.slot_id = $1
+        AND r.status = 'approved'
+      ORDER BY t.team_name ASC
+    `,
+    [slotId]
+  );
+}
+
+async function listGameResults() {
+  return query<LeagueGameResultRecord>(
+    `
+      SELECT *
+      FROM game_results
+      ORDER BY slot_id ASC, week ASC, match_date ASC
+    `
+  );
+}
+
+async function listGameResultSubmissions() {
+  return query<LeagueGameSubmissionRecord>(
+    `
+      SELECT *
+      FROM game_result_submissions
+      ORDER BY slot_id ASC, week ASC, updated_at DESC
+    `
+  );
+}
+
+async function listStoredLeagueGames() {
+  return query<LeagueGameStoredRecord>(
+    `
+      SELECT
+        g.id,
+        g.slot_id,
+        g.day_label,
+        g.time_label,
+        g.week,
+        g.match_date::text,
+        g.date_label,
+        g.location_label,
+        g.home_team_id,
+        home.team_name AS home_team_name,
+        g.away_team_id,
+        away.team_name AS away_team_name,
+        g.created_at,
+        g.updated_at
+      FROM league_games g
+      JOIN teams home ON home.id = g.home_team_id
+      JOIN teams away ON away.id = g.away_team_id
+      ORDER BY g.match_date ASC, g.time_label ASC, g.slot_id ASC, g.week ASC, home.team_name ASC
+    `
+  );
+}
+
+async function syncLeagueGames() {
+  const slotGames = await Promise.all(
+    recurringSlots.map(async (slot) => {
+      const teams = (await listApprovedSlotTeamsDetailed(slot.id)).map(
+        (team) =>
+          ({
+            id: team.id,
+            teamName: team.team_name
+          }) satisfies SlotTeam
+      );
+
+      return generateSlotSchedule(slot.id, teams);
+    })
+  );
+
+  const generatedGames = slotGames.flat();
+
+  await withTransaction(async (client) => {
+    await client.query("TRUNCATE TABLE league_games");
+
+    for (const game of generatedGames) {
+      await client.query(
+        `
+          INSERT INTO league_games (
+            slot_id,
+            day_label,
+            time_label,
+            week,
+            match_date,
+            date_label,
+            location_label,
+            home_team_id,
+            away_team_id,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+        `,
+        [
+          game.slotId,
+          game.dayLabel,
+          game.timeLabel,
+          game.week,
+          game.matchDate,
+          game.dateLabel,
+          game.locationLabel,
+          game.homeTeamId,
+          game.awayTeamId
+        ]
+      );
+    }
+  });
+}
+
+function resolveLeagueGameResult(
+  scheduledGame: GeneratedLeagueGame,
+  adminResult: LeagueGameResultRecord | undefined,
+  submissions: LeagueGameSubmissionRecord[]
+) {
+  if (adminResult?.winner_team_id) {
+    return {
+      winnerTeamId: adminResult.winner_team_id,
+      homeTeamWins: adminResult.home_team_wins,
+      awayTeamWins: adminResult.away_team_wins
+    };
+  }
+
+  if (submissions.length < 2) {
+    return {
+      winnerTeamId: null,
+      homeTeamWins: null,
+      awayTeamWins: null
+    };
+  }
+
+  const [firstSubmission, ...otherSubmissions] = submissions;
+  const isAgreement = otherSubmissions.every(
+    (submission) =>
+      submission.winner_team_id === firstSubmission.winner_team_id &&
+      submission.home_team_wins === firstSubmission.home_team_wins &&
+      submission.away_team_wins === firstSubmission.away_team_wins
+  );
+
+  if (!isAgreement) {
+    return {
+      winnerTeamId: null,
+      homeTeamWins: null,
+      awayTeamWins: null
+    };
+  }
+
+  return {
+    winnerTeamId: firstSubmission.winner_team_id,
+    homeTeamWins: firstSubmission.home_team_wins,
+    awayTeamWins: firstSubmission.away_team_wins
+  };
+}
+
 export async function listSlots() {
   const counts = await query<{ slot_id: string; count: string }>(
     `
@@ -657,6 +1026,179 @@ export async function listSlots() {
       teams: teamMap.get(slot.id) || []
     } satisfies SlotRecord;
   });
+}
+
+export async function listLeagueGames() {
+  await syncLeagueGames();
+
+  const scheduledGames = await listStoredLeagueGames();
+  const results = await listGameResults();
+  const submissions = await listGameResultSubmissions();
+  const resultMap = new Map(
+    results.map((result) => [
+      `${result.slot_id}:${result.week}:${result.home_team_id}:${result.away_team_id}`,
+      result
+    ])
+  );
+  const submissionMap = new Map<string, LeagueGameSubmissionRecord[]>();
+
+  for (const submission of submissions) {
+    const key = `${submission.slot_id}:${submission.week}:${submission.home_team_id}:${submission.away_team_id}`;
+    const current = submissionMap.get(key) || [];
+    current.push(submission);
+    submissionMap.set(key, current);
+  }
+
+  return scheduledGames
+    .map((game) => {
+      const scheduledGame = {
+        slotId: game.slot_id,
+        dayLabel: game.day_label,
+        timeLabel: game.time_label,
+        week: Number(game.week),
+        matchDate: game.match_date,
+        dateLabel: game.date_label,
+        locationLabel: game.location_label,
+        homeTeamId: game.home_team_id,
+        homeTeamName: game.home_team_name,
+        awayTeamId: game.away_team_id,
+        awayTeamName: game.away_team_name
+      } satisfies GeneratedLeagueGame;
+      const key = `${scheduledGame.slotId}:${scheduledGame.week}:${scheduledGame.homeTeamId}:${scheduledGame.awayTeamId}`;
+      const result = resultMap.get(key);
+      const gameSubmissions = submissionMap.get(key) || [];
+      const resolvedResult = resolveLeagueGameResult(scheduledGame, result, gameSubmissions);
+
+      return {
+        ...scheduledGame,
+        id: result?.id,
+        winnerTeamId: resolvedResult.winnerTeamId,
+        homeTeamWins: resolvedResult.homeTeamWins,
+        awayTeamWins: resolvedResult.awayTeamWins,
+        submissions: gameSubmissions
+      } satisfies LeagueGameRecord;
+    })
+    .sort((left, right) => {
+      const leftOrder = recurringSlots.find((slot) => slot.id === left.slotId)?.sortOrder ?? 0;
+      const rightOrder = recurringSlots.find((slot) => slot.id === right.slotId)?.sortOrder ?? 0;
+
+      return left.week - right.week || leftOrder - rightOrder || left.homeTeamName.localeCompare(right.homeTeamName);
+    });
+}
+
+export async function listLeagueGamesForTeam(teamId: string) {
+  const games = await listLeagueGames();
+  return games.filter((game) => game.homeTeamId === teamId || game.awayTeamId === teamId);
+}
+
+export async function listLeagueStandings() {
+  const games = await listLeagueGames();
+  return buildStandingsFromGames(games) satisfies SlotStandings[];
+}
+
+export async function saveLeagueGameResult(input: {
+  slotId: string;
+  week: number;
+  matchDate: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  winnerTeamId: string | null;
+}) {
+  if (!input.winnerTeamId) {
+    await query(
+      `
+        DELETE FROM game_results
+        WHERE slot_id = $1
+          AND week = $2
+          AND home_team_id = $3
+          AND away_team_id = $4
+      `,
+      [input.slotId, input.week, input.homeTeamId, input.awayTeamId]
+    );
+    return;
+  }
+
+  if (input.winnerTeamId !== input.homeTeamId && input.winnerTeamId !== input.awayTeamId) {
+    throw new Error("Winner must be one of the scheduled teams.");
+  }
+
+  await query(
+    `
+      INSERT INTO game_results (
+        slot_id,
+        week,
+        match_date,
+        home_team_id,
+        away_team_id,
+        winner_team_id,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+      ON CONFLICT (slot_id, week, home_team_id, away_team_id)
+      DO UPDATE SET
+        winner_team_id = EXCLUDED.winner_team_id,
+        match_date = EXCLUDED.match_date,
+        updated_at = now()
+    `,
+    [
+      input.slotId,
+      input.week,
+      input.matchDate,
+      input.homeTeamId,
+      input.awayTeamId,
+      input.winnerTeamId
+    ]
+  );
+}
+
+export async function submitLeagueGameResult(input: {
+  slotId: string;
+  week: number;
+  matchDate: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  submittingTeamId: string;
+  winnerTeamId: string;
+  homeTeamWins: number;
+  awayTeamWins: number;
+}) {
+  await query(
+    `
+      INSERT INTO game_result_submissions (
+        slot_id,
+        week,
+        match_date,
+        home_team_id,
+        away_team_id,
+        submitting_team_id,
+        winner_team_id,
+        home_team_wins,
+        away_team_wins,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+      ON CONFLICT (slot_id, week, home_team_id, away_team_id, submitting_team_id)
+      DO UPDATE SET
+        winner_team_id = EXCLUDED.winner_team_id,
+        home_team_wins = EXCLUDED.home_team_wins,
+        away_team_wins = EXCLUDED.away_team_wins,
+        match_date = EXCLUDED.match_date,
+        updated_at = now()
+    `,
+    [
+      input.slotId,
+      input.week,
+      input.matchDate,
+      input.homeTeamId,
+      input.awayTeamId,
+      input.submittingTeamId,
+      input.winnerTeamId,
+      input.homeTeamWins,
+      input.awayTeamWins
+    ]
+  );
 }
 
 export function getSlotById(slotId: string) {
