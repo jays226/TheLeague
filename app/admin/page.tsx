@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 import {
   approveReservationAction,
@@ -108,14 +109,22 @@ export default async function AdminPage({
               board.
             </p>
           </div>
-          <form action={logoutAction}>
-            <button
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
-              type="submit"
+          <div className="flex gap-3">
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
+              href="/admin/games"
             >
-              Log out
-            </button>
-          </form>
+              Weekly games
+            </Link>
+            <form action={logoutAction}>
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
+                type="submit"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-3">
