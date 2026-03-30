@@ -17,12 +17,12 @@ export default function HomePage() {
               width={64}
             />
           </div>
-          <p className="mt-6 text-sm font-semibold uppercase tracking-[0.24em] text-primary/75">
-            The League
-          </p>
           <h1 className="mt-4 text-5xl font-semibold tracking-[-0.05em] text-foreground sm:text-6xl">
             The League
           </h1>
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">
+            Team Portal
+          </p>
           <p className="mt-4 max-w-md text-base leading-7 text-muted-foreground">
             Log in to view your dashboard, weekly schedule, and match reporting.
           </p>
