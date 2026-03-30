@@ -21,7 +21,7 @@ export default function HomePage() {
             The League
           </p>
           <h1 className="mt-4 text-5xl font-semibold tracking-[-0.05em] text-foreground sm:text-6xl">
-            Team Portal
+            The League
           </h1>
           <p className="mt-4 max-w-md text-base leading-7 text-muted-foreground">
             Log in to view your dashboard, weekly schedule, and match reporting.
