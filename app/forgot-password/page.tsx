@@ -47,9 +47,10 @@ export default function ForgotPasswordPage() {
               Enter one team member&apos;s UVA email and we&apos;ll send a reset link if that team is registered.
             </p>
             <div className="mt-6 inline-flex rounded-[28px] border border-white/70 bg-white/70 p-4 shadow-soft">
-              <p className="max-w-sm text-sm text-muted-foreground">
-                The link goes only to the email you enter and expires in one hour.
-              </p>
+              <div className="max-w-sm space-y-2 text-sm text-muted-foreground">
+                <p>The link goes only to the email you enter and expires in one hour.</p>
+                <p>If the password reset email doesn&apos;t go through, email theleagueatuva@gmail.com.</p>
+              </div>
             </div>
           </div>
 
