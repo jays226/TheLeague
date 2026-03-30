@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   getActiveReservationForTeam,
+  getTeamById,
   getTeamByAccessToken,
   listLeagueGamesForTeam,
   listLeagueStandings,
@@ -95,6 +96,10 @@ export default async function AppPage({
     reportableGames[0] ??
     decoratedSchedule.find((game) => game.closesAt >= now && !game.winnerTeamId) ??
     decoratedSchedule[0];
+  const opponentTeam =
+    currentMatchup
+      ? await getTeamById(currentMatchup.homeTeamId === team.id ? currentMatchup.awayTeamId : currentMatchup.homeTeamId)
+      : null;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -206,7 +211,7 @@ export default async function AppPage({
                   </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  Opens at match time, closes at midnight
+                  Scoring opens at match time, closes at midnight
                 </span>
               </div>
 
@@ -247,9 +252,30 @@ export default async function AppPage({
                         <p className="mt-1 text-sm font-semibold text-foreground">
                           {currentMatchup.locationLabel}
                         </p>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                          "A" means the side of the court closer to Memorial Gym or Old Dorms. "B"
+                          is the other side of the court.
+                        </p>
                       </div>
                     ) : null}
                   </div>
+
+                  {opponentTeam ? (
+                    <div className="mt-4 rounded-2xl border border-border/70 bg-secondary/55 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                        Opponent contact
+                      </p>
+                      <div className="mt-2 space-y-2 text-sm text-foreground">
+                        <p className="font-semibold">{opponentTeam.team_name}</p>
+                        <p>
+                          {opponentTeam.player_one_name} • {opponentTeam.player_one_email}
+                        </p>
+                        <p>
+                          {opponentTeam.player_two_name} • {opponentTeam.player_two_email}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <p className="mt-4 text-sm text-muted-foreground">
                     {currentMatchup.canSubmitNow
@@ -261,6 +287,7 @@ export default async function AppPage({
                     awayTeamId={currentMatchup.awayTeamId}
                     awayTeamName={currentMatchup.awayTeamName}
                     awayTeamWins={currentMatchup.teamSubmission?.away_team_wins ?? null}
+                    currentTeamId={team.id}
                     homeTeamId={currentMatchup.homeTeamId}
                     homeTeamName={currentMatchup.homeTeamName}
                     homeTeamWins={currentMatchup.teamSubmission?.home_team_wins ?? null}

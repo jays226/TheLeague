@@ -4,6 +4,13 @@ import type { TeamRecord } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatCurrency } from "@/lib/utils";
 
+const adminRecipients = [
+  "bmt7uk@virginia.edu",
+  "jww2fj@virginia.edu",
+  "fse7nq@virginia.edu",
+  "ysf6mf@virginia.edu"
+];
+
 async function getTransporter() {
   if (!env.smtpHost || !env.smtpPort || !env.smtpUser || !env.smtpPass || !env.smtpFrom) {
     return null;
@@ -221,12 +228,6 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
     return;
   }
 
-  const adminRecipients = [
-    "bmt7uk@virginia.edu",
-    "jww2fj@virginia.edu",
-    "fse7nq@virginia.edu",
-    "ysf6mf@virginia.edu"
-  ];
   const subject = `New League signup: ${team.team_name}`;
 
   await transporter.sendMail({
@@ -247,6 +248,53 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
         <p><strong>Team name:</strong> ${team.team_name}</p>
         <p><strong>Player 1:</strong> ${team.player_one_name} (${team.player_one_email})</p>
         <p><strong>Player 2:</strong> ${team.player_two_name} (${team.player_two_email})</p>
+      </div>
+    `
+  });
+}
+
+export async function sendScoreMismatchAlert(input: {
+  week: number;
+  dateLabel: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  submittedByTeamName: string;
+  submittedWinnerTeamName: string;
+  submittedScore: string;
+  opponentSubmittedByTeamName: string;
+  opponentWinnerTeamName: string;
+  opponentScore: string;
+}) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Score mismatch alert skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  const subject = `Score mismatch alert: ${input.homeTeamName} vs ${input.awayTeamName}`;
+
+  await transporter.sendMail({
+    from: env.smtpFrom,
+    to: adminRecipients.join(", "),
+    subject,
+    text: [
+      "Two teams submitted conflicting results for the same League matchup.",
+      "",
+      `Week ${input.week}`,
+      input.dateLabel,
+      `${input.homeTeamName} vs ${input.awayTeamName}`,
+      "",
+      `${input.submittedByTeamName} submitted: ${input.submittedWinnerTeamName} won ${input.submittedScore}`,
+      `${input.opponentSubmittedByTeamName} submitted: ${input.opponentWinnerTeamName} won ${input.opponentScore}`
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
+        <h2 style="margin-bottom: 12px;">Score mismatch alert</h2>
+        <p>Two teams submitted conflicting results for the same <strong>The League</strong> matchup.</p>
+        <p><strong>Week ${input.week}</strong><br />${input.dateLabel}<br />${input.homeTeamName} vs ${input.awayTeamName}</p>
+        <p><strong>${input.submittedByTeamName}</strong> submitted: ${input.submittedWinnerTeamName} won ${input.submittedScore}</p>
+        <p><strong>${input.opponentSubmittedByTeamName}</strong> submitted: ${input.opponentWinnerTeamName} won ${input.opponentScore}</p>
       </div>
     `
   });

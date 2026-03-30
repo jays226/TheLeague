@@ -13,6 +13,7 @@ import {
   reserveSlot
 } from "@/lib/db";
 import { submitLeagueGameResult } from "@/lib/db";
+import { sendScoreMismatchAlert } from "@/lib/email-notifications";
 import { createId, leagueCookieName } from "@/lib/session";
 
 async function requireTeam() {
@@ -131,6 +132,17 @@ function getGameWindow(matchDate: string, timeLabel: string) {
   };
 }
 
+function submissionsMatch(
+  left: { winnerTeamId: string; homeTeamWins: number; awayTeamWins: number },
+  right: { winner_team_id: string; home_team_wins: number; away_team_wins: number }
+) {
+  return (
+    left.winnerTeamId === right.winner_team_id &&
+    left.homeTeamWins === right.home_team_wins &&
+    left.awayTeamWins === right.away_team_wins
+  );
+}
+
 export async function submitGameResultAction(formData: FormData) {
   try {
     const team = await requireTeam();
@@ -156,6 +168,11 @@ export async function submitGameResultAction(formData: FormData) {
     if (!game) {
       throw new Error("That scheduled game could not be found for your team.");
     }
+
+    const teamSubmission = game.submissions.find((submission) => submission.submitting_team_id === team.id);
+    const opponentSubmission = game.submissions.find(
+      (submission) => submission.submitting_team_id !== team.id
+    );
 
     const { opensAt, closesAt } = getGameWindow(matchDate, timeLabel);
     const now = new Date();
@@ -209,6 +226,53 @@ export async function submitGameResultAction(formData: FormData) {
       homeTeamWins,
       awayTeamWins
     });
+
+    if (
+      opponentSubmission &&
+      !submissionsMatch(
+        {
+          winnerTeamId,
+          homeTeamWins,
+          awayTeamWins
+        },
+        opponentSubmission
+      ) &&
+      (
+        !teamSubmission ||
+        !submissionsMatch(
+          {
+            winnerTeamId,
+            homeTeamWins,
+            awayTeamWins
+          },
+          teamSubmission
+        )
+      )
+    ) {
+      try {
+        await sendScoreMismatchAlert({
+          week: game.week,
+          dateLabel: game.dateLabel,
+          homeTeamName: game.homeTeamName,
+          awayTeamName: game.awayTeamName,
+          submittedByTeamName: team.team_name,
+          submittedWinnerTeamName:
+            winnerTeamId === homeTeamId ? game.homeTeamName : game.awayTeamName,
+          submittedScore: `${homeTeamWins}-${awayTeamWins}`,
+          opponentSubmittedByTeamName:
+            opponentSubmission.submitting_team_id === homeTeamId
+              ? game.homeTeamName
+              : game.awayTeamName,
+          opponentWinnerTeamName:
+            opponentSubmission.winner_team_id === homeTeamId
+              ? game.homeTeamName
+              : game.awayTeamName,
+          opponentScore: `${opponentSubmission.home_team_wins}-${opponentSubmission.away_team_wins}`
+        });
+      } catch (error) {
+        console.error("Score mismatch alert failed", error);
+      }
+    }
 
     revalidatePath("/app");
     revalidatePath("/admin");
