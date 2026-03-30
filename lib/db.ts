@@ -79,6 +79,31 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        ALTER TABLE password_reset_tokens
+        ADD COLUMN IF NOT EXISTS team_id uuid REFERENCES teams(id) ON DELETE CASCADE
+      `);
+
+      await pool.query(`
+        ALTER TABLE password_reset_tokens
+        ADD COLUMN IF NOT EXISTS email text
+      `);
+
+      await pool.query(`
+        ALTER TABLE password_reset_tokens
+        ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now()
+      `);
+
+      await pool.query(`
+        ALTER TABLE password_reset_tokens
+        ADD COLUMN IF NOT EXISTS expires_at timestamptz
+      `);
+
+      await pool.query(`
+        ALTER TABLE password_reset_tokens
+        ADD COLUMN IF NOT EXISTS used_at timestamptz
+      `);
+
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_team_id
         ON password_reset_tokens (team_id)
       `);

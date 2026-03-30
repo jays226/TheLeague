@@ -35,7 +35,8 @@ export function ForgotPasswordForm() {
       }
 
       setMessage(
-        data.message || "If that email matches a registered team, a password reset link has been sent."
+        data.message ||
+          "If that email matches a registered team, a password reset link has been sent. If it doesn't go through, email theleagueatuva@gmail.com."
       );
     });
   }
