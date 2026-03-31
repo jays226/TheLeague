@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { saveGameResultAction } from "@/app/admin/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getAdminSession, listLeagueGames, purgeExpiredAdminSessions } from "@/lib/db";
@@ -184,6 +185,57 @@ export default async function AdminGamesPage({
                       <p className="mt-3 text-sm text-muted-foreground">No submission yet.</p>
                     )}
                   </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl bg-[rgba(245,132,79,0.08)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                    Manual result override
+                  </p>
+                  <form action={saveGameResultAction} className="mt-3 flex flex-wrap items-center gap-3">
+                    <input name="slotId" type="hidden" value={game.slotId} />
+                    <input name="week" type="hidden" value={String(game.week)} />
+                    <input name="matchDate" type="hidden" value={game.matchDate} />
+                    <input name="homeTeamId" type="hidden" value={game.homeTeamId} />
+                    <input name="awayTeamId" type="hidden" value={game.awayTeamId} />
+                    <input
+                      aria-label={`${game.homeTeamName} wins`}
+                      className="h-11 w-20 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                      defaultValue={game.homeTeamWins ?? ""}
+                      inputMode="numeric"
+                      max={3}
+                      min={0}
+                      name="homeTeamWins"
+                      placeholder="2"
+                      type="number"
+                    />
+                    <span className="text-sm font-semibold text-muted-foreground">-</span>
+                    <input
+                      aria-label={`${game.awayTeamName} wins`}
+                      className="h-11 w-20 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                      defaultValue={game.awayTeamWins ?? ""}
+                      inputMode="numeric"
+                      max={3}
+                      min={0}
+                      name="awayTeamWins"
+                      placeholder="1"
+                      type="number"
+                    />
+                    <select
+                      className="h-11 min-w-56 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                      defaultValue={game.winnerTeamId ?? ""}
+                      name="winnerTeamId"
+                    >
+                      <option value="">No result recorded</option>
+                      <option value={game.homeTeamId}>{game.homeTeamName}</option>
+                      <option value={game.awayTeamId}>{game.awayTeamName}</option>
+                    </select>
+                    <button
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                      type="submit"
+                    >
+                      Save result
+                    </button>
+                  </form>
                 </div>
               </Card>
             ))
