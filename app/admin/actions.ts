@@ -218,13 +218,42 @@ export async function setTeamWaitlistAction(formData: FormData) {
 export async function saveGameResultAction(formData: FormData) {
   await requireAdmin();
 
+  const winnerTeamId = String(formData.get("winnerTeamId") || "").trim() || null;
+  const rawHomeTeamWins = String(formData.get("homeTeamWins") || "").trim();
+  const rawAwayTeamWins = String(formData.get("awayTeamWins") || "").trim();
+  const homeTeamWins = rawHomeTeamWins ? Number(rawHomeTeamWins) : null;
+  const awayTeamWins = rawAwayTeamWins ? Number(rawAwayTeamWins) : null;
+
+  if ((rawHomeTeamWins && !Number.isInteger(homeTeamWins)) || (rawAwayTeamWins && !Number.isInteger(awayTeamWins))) {
+    throw new Error("Manual scores must be whole numbers.");
+  }
+
+  if (
+    homeTeamWins !== null &&
+    awayTeamWins !== null &&
+    (homeTeamWins < 0 || awayTeamWins < 0 || homeTeamWins > 3 || awayTeamWins > 3)
+  ) {
+    throw new Error("Manual scores must be between 0 and 3.");
+  }
+
+  if (
+    winnerTeamId &&
+    homeTeamWins !== null &&
+    awayTeamWins !== null &&
+    homeTeamWins === awayTeamWins
+  ) {
+    throw new Error("Manual result cannot be a tie.");
+  }
+
   await saveLeagueGameResult({
     slotId: String(formData.get("slotId") || ""),
     week: Number(formData.get("week") || 0),
     matchDate: String(formData.get("matchDate") || ""),
     homeTeamId: String(formData.get("homeTeamId") || ""),
     awayTeamId: String(formData.get("awayTeamId") || ""),
-    winnerTeamId: String(formData.get("winnerTeamId") || "").trim() || null
+    winnerTeamId,
+    homeTeamWins,
+    awayTeamWins
   });
 
   revalidatePath("/admin");

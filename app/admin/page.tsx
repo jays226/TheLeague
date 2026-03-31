@@ -494,6 +494,29 @@ export default async function AdminPage({
                       <input name="matchDate" type="hidden" value={game.matchDate} />
                       <input name="homeTeamId" type="hidden" value={game.homeTeamId} />
                       <input name="awayTeamId" type="hidden" value={game.awayTeamId} />
+                      <input
+                        aria-label={`${game.homeTeamName} wins`}
+                        className="h-11 w-20 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                        defaultValue={game.homeTeamWins ?? ""}
+                        inputMode="numeric"
+                        max={3}
+                        min={0}
+                        name="homeTeamWins"
+                        placeholder="2"
+                        type="number"
+                      />
+                      <span className="text-sm font-semibold text-muted-foreground">-</span>
+                      <input
+                        aria-label={`${game.awayTeamName} wins`}
+                        className="h-11 w-20 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                        defaultValue={game.awayTeamWins ?? ""}
+                        inputMode="numeric"
+                        max={3}
+                        min={0}
+                        name="awayTeamWins"
+                        placeholder="1"
+                        type="number"
+                      />
                       <select
                         className="h-11 min-w-56 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                         defaultValue={game.winnerTeamId ?? ""}
