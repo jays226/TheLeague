@@ -8,6 +8,17 @@ import { getAdminSession, listLeagueGames, purgeExpiredAdminSessions } from "@/l
 import { env } from "@/lib/env";
 import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
 
+function formatEasternTimestamp(value: string) {
+  return `${new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(value))} ET`;
+}
+
 export default async function AdminGamesPage({
   searchParams
 }: {
@@ -130,7 +141,7 @@ export default async function AdminGamesPage({
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
                               <p className="text-muted-foreground">
-                                Submitted {new Date(submission.updated_at).toLocaleString()}
+                                Submitted {formatEasternTimestamp(submission.updated_at)}
                               </p>
                             </>
                           );
@@ -163,7 +174,7 @@ export default async function AdminGamesPage({
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
                               <p className="text-muted-foreground">
-                                Submitted {new Date(submission.updated_at).toLocaleString()}
+                                Submitted {formatEasternTimestamp(submission.updated_at)}
                               </p>
                             </>
                           );
