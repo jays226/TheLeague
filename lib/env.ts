@@ -9,5 +9,6 @@ export const env = {
   smtpPort: process.env.SMTP_PORT,
   smtpUser: process.env.SMTP_USER,
   smtpPass: process.env.SMTP_PASS,
-  smtpFrom: process.env.SMTP_FROM
+  smtpFrom: process.env.SMTP_FROM,
+  cronSecret: process.env.CRON_SECRET
 };

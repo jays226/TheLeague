@@ -13,6 +13,7 @@ import {
   reserveSlot
 } from "@/lib/db";
 import { submitLeagueGameResult } from "@/lib/db";
+import { getLeagueGameWindow } from "@/lib/eastern-time";
 import { sendScoreMismatchAlert } from "@/lib/email-notifications";
 import { createId, leagueCookieName } from "@/lib/session";
 
@@ -114,24 +115,6 @@ function redirectScheduleWithMessage(message: string, tone: "success" | "error")
   redirect(`/app?${params.toString()}`);
 }
 
-function getGameWindow(matchDate: string, timeLabel: string) {
-  const [time, meridiem] = timeLabel.split(" ");
-  const [rawHour, rawMinute] = time.split(":").map(Number);
-  let hour = rawHour % 12;
-
-  if (meridiem === "PM") {
-    hour += 12;
-  }
-
-  const isoHour = String(hour).padStart(2, "0");
-  const isoMinute = String(rawMinute).padStart(2, "0");
-
-  return {
-    opensAt: new Date(`${matchDate}T${isoHour}:${isoMinute}:00-04:00`),
-    closesAt: new Date(`${matchDate}T23:59:59-04:00`)
-  };
-}
-
 function submissionsMatch(
   left: { winnerTeamId: string; homeTeamWins: number; awayTeamWins: number },
   right: { winner_team_id: string; home_team_wins: number; away_team_wins: number }
@@ -174,7 +157,7 @@ export async function submitGameResultAction(formData: FormData) {
       (submission) => submission.submitting_team_id !== team.id
     );
 
-    const { opensAt, closesAt } = getGameWindow(matchDate, timeLabel);
+    const { opensAt, closesAt } = getLeagueGameWindow(matchDate, timeLabel);
     const now = new Date();
 
     if (now < opensAt) {

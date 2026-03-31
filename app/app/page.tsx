@@ -16,26 +16,9 @@ import {
   listLeagueStandings,
   listSlots
 } from "@/lib/db";
+import { getLeagueGameWindow } from "@/lib/eastern-time";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
-
-function getGameWindow(matchDate: string, timeLabel: string) {
-  const [time, meridiem] = timeLabel.split(" ");
-  const [rawHour, rawMinute] = time.split(":").map(Number);
-  let hour = rawHour % 12;
-
-  if (meridiem === "PM") {
-    hour += 12;
-  }
-
-  const isoHour = String(hour).padStart(2, "0");
-  const isoMinute = String(rawMinute).padStart(2, "0");
-
-  return {
-    opensAt: new Date(`${matchDate}T${isoHour}:${isoMinute}:00-04:00`),
-    closesAt: new Date(`${matchDate}T23:59:59-04:00`)
-  };
-}
 
 function getCurrentPortalTime() {
   return new Date();
@@ -71,7 +54,7 @@ export default async function AppPage({
   const now = getCurrentPortalTime();
   const decoratedSchedule = teamSchedule
     .map((game) => {
-      const { opensAt, closesAt } = getGameWindow(game.matchDate, game.timeLabel);
+      const { opensAt, closesAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
       const teamSubmission = game.submissions.find((submission) => submission.submitting_team_id === team.id);
       const opponentSubmission = game.submissions.find(
         (submission) => submission.submitting_team_id !== team.id

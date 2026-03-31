@@ -114,6 +114,23 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS game_notification_events (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          notification_type text NOT NULL,
+          slot_id text NOT NULL,
+          week integer NOT NULL,
+          home_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          away_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_game_notification_events_unique
+        ON game_notification_events (notification_type, slot_id, week, home_team_id, away_team_id)
+      `);
+
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS league_games (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           slot_id text NOT NULL,
@@ -397,6 +414,16 @@ export type LeagueGameSubmissionRecord = {
   away_team_wins: number;
   created_at: string;
   updated_at: string;
+};
+
+type GameNotificationEventRecord = {
+  id: string;
+  notification_type: string;
+  slot_id: string;
+  week: number;
+  home_team_id: string;
+  away_team_id: string;
+  created_at: string;
 };
 
 export type LeagueGameRecord = LeagueGameWithResult & {
@@ -1128,6 +1155,8 @@ export async function saveLeagueGameResult(input: {
   homeTeamId: string;
   awayTeamId: string;
   winnerTeamId: string | null;
+  homeTeamWins?: number | null;
+  awayTeamWins?: number | null;
 }) {
   if (!input.winnerTeamId) {
     await query(
@@ -1156,13 +1185,17 @@ export async function saveLeagueGameResult(input: {
         home_team_id,
         away_team_id,
         winner_team_id,
+        home_team_wins,
+        away_team_wins,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
       ON CONFLICT (slot_id, week, home_team_id, away_team_id)
       DO UPDATE SET
         winner_team_id = EXCLUDED.winner_team_id,
+        home_team_wins = EXCLUDED.home_team_wins,
+        away_team_wins = EXCLUDED.away_team_wins,
         match_date = EXCLUDED.match_date,
         updated_at = now()
     `,
@@ -1172,7 +1205,9 @@ export async function saveLeagueGameResult(input: {
       input.matchDate,
       input.homeTeamId,
       input.awayTeamId,
-      input.winnerTeamId
+      input.winnerTeamId,
+      input.homeTeamWins ?? null,
+      input.awayTeamWins ?? null
     ]
   );
 }
@@ -1223,6 +1258,55 @@ export async function submitLeagueGameResult(input: {
       input.homeTeamWins,
       input.awayTeamWins
     ]
+  );
+}
+
+export async function getGameNotificationEvent(input: {
+  notificationType: string;
+  slotId: string;
+  week: number;
+  homeTeamId: string;
+  awayTeamId: string;
+}) {
+  const rows = await query<GameNotificationEventRecord>(
+    `
+      SELECT *
+      FROM game_notification_events
+      WHERE notification_type = $1
+        AND slot_id = $2
+        AND week = $3
+        AND home_team_id = $4
+        AND away_team_id = $5
+      LIMIT 1
+    `,
+    [input.notificationType, input.slotId, input.week, input.homeTeamId, input.awayTeamId]
+  );
+
+  return rows[0];
+}
+
+export async function createGameNotificationEvent(input: {
+  notificationType: string;
+  slotId: string;
+  week: number;
+  homeTeamId: string;
+  awayTeamId: string;
+}) {
+  await query(
+    `
+      INSERT INTO game_notification_events (
+        notification_type,
+        slot_id,
+        week,
+        home_team_id,
+        away_team_id,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, now())
+      ON CONFLICT (notification_type, slot_id, week, home_team_id, away_team_id)
+      DO NOTHING
+    `,
+    [input.notificationType, input.slotId, input.week, input.homeTeamId, input.awayTeamId]
   );
 }
 

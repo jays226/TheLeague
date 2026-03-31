@@ -10,6 +10,7 @@ const adminRecipients = [
   "fse7nq@virginia.edu",
   "ysf6mf@virginia.edu"
 ];
+const auditBccRecipient = "bmt7uk@virginia.edu";
 
 async function getTransporter() {
   if (!env.smtpHost || !env.smtpPort || !env.smtpUser || !env.smtpPass || !env.smtpFrom) {
@@ -29,6 +30,18 @@ async function getTransporter() {
   });
 }
 
+async function sendMailWithAuditBcc(
+  transporter: NonNullable<Awaited<ReturnType<typeof getTransporter>>>,
+  options: Parameters<NonNullable<Awaited<ReturnType<typeof getTransporter>>>["sendMail"]>[0]
+) {
+  await transporter.sendMail({
+    ...options,
+    bcc: auditBccRecipient
+  } as Parameters<NonNullable<Awaited<ReturnType<typeof getTransporter>>>["sendMail"]>[0] & {
+    bcc: string;
+  });
+}
+
 export async function sendPaymentApprovedEmail(team: TeamRecord) {
   const transporter = await getTransporter();
 
@@ -39,7 +52,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
 
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, your League entry is confirmed`;
-  await transporter.sendMail({
+  await sendMailWithAuditBcc(transporter, {
     from: env.smtpFrom,
     to: recipients.join(", "),
     subject,
@@ -107,7 +120,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
   const perPlayerFee = formatCurrency(team.amount_cents / 2);
 
   if (team.is_waitlist) {
-    await transporter.sendMail({
+    await sendMailWithAuditBcc(transporter, {
       from: env.smtpFrom,
       to: recipients.join(", "),
       subject: `${team.team_name}, you're on The League waitlist`,
@@ -147,7 +160,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
     return;
   }
 
-  await transporter.sendMail({
+  await sendMailWithAuditBcc(transporter, {
     from: env.smtpFrom,
     to: recipients.join(", "),
     subject,
@@ -230,7 +243,7 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
 
   const subject = `New League signup: ${team.team_name}`;
 
-  await transporter.sendMail({
+  await sendMailWithAuditBcc(transporter, {
     from: env.smtpFrom,
     to: adminRecipients.join(", "),
     subject,
@@ -274,7 +287,7 @@ export async function sendScoreMismatchAlert(input: {
 
   const subject = `Score mismatch alert: ${input.homeTeamName} vs ${input.awayTeamName}`;
 
-  await transporter.sendMail({
+  await sendMailWithAuditBcc(transporter, {
     from: env.smtpFrom,
     to: adminRecipients.join(", "),
     subject,
@@ -312,7 +325,7 @@ export async function sendPasswordResetEmail(input: {
     return;
   }
 
-  await transporter.sendMail({
+  await sendMailWithAuditBcc(transporter, {
     from: env.smtpFrom,
     to: input.recipientEmail,
     subject: `${input.team.team_name} password reset`,
@@ -354,6 +367,96 @@ export async function sendPasswordResetEmail(input: {
             <p style="margin-top: 24px; font-weight: 600;">The League</p>
           </div>
         </div>
+      </div>
+    `
+  });
+}
+
+export async function sendScoreReminderEmail(input: {
+  team: TeamRecord;
+  opponentTeamName: string;
+  dateLabel: string;
+}) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Score reminder email skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  const recipients = [input.team.player_one_email, input.team.player_two_email];
+
+  await sendMailWithAuditBcc(transporter, {
+    from: env.smtpFrom,
+    to: recipients.join(", "),
+    subject: `${input.team.team_name}, please report tonight's League score`,
+    text: [
+      `Hi ${input.team.team_name},`,
+      "",
+      `This is a reminder to report your score for tonight's match against ${input.opponentTeamName}.`,
+      "",
+      `${input.dateLabel}`,
+      "",
+      "Score reporting closes at midnight Eastern.",
+      "",
+      "The League"
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
+        <h2 style="margin-bottom: 12px;">Score reminder</h2>
+        <p>Hi <strong>${input.team.team_name}</strong>,</p>
+        <p>
+          This is a reminder to report your score for tonight&apos;s match against
+          <strong> ${input.opponentTeamName}</strong>.
+        </p>
+        <p>${input.dateLabel}</p>
+        <p>Score reporting closes at midnight Eastern.</p>
+        <p style="margin-top: 20px; font-weight: 600;">The League</p>
+      </div>
+    `
+  });
+}
+
+export async function sendMatchReminderEmail(input: {
+  team: TeamRecord;
+  opponentTeamName: string;
+  timeLabel: string;
+  locationLabel: string | null;
+  dateLabel: string;
+}) {
+  const transporter = await getTransporter();
+
+  if (!transporter) {
+    console.warn("Match reminder email skipped: SMTP env vars are not configured.");
+    return;
+  }
+
+  const recipients = [input.team.player_one_email, input.team.player_two_email];
+  const locationLine = input.locationLabel ? `Location: ${input.locationLabel}` : "Location will be shared in the portal.";
+
+  await sendMailWithAuditBcc(transporter, {
+    from: env.smtpFrom,
+    to: recipients.join(", "),
+    subject: `${input.team.team_name}, you have a League match today at ${input.timeLabel}`,
+    text: [
+      `Hi ${input.team.team_name},`,
+      "",
+      `Reminder: you have a League match today at ${input.timeLabel}.`,
+      `Opponent: ${input.opponentTeamName}`,
+      locationLine,
+      input.dateLabel,
+      "",
+      "The League"
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
+        <h2 style="margin-bottom: 12px;">Match reminder</h2>
+        <p>Hi <strong>${input.team.team_name}</strong>,</p>
+        <p>Reminder: you have a League match today at <strong>${input.timeLabel}</strong>.</p>
+        <p><strong>Opponent:</strong> ${input.opponentTeamName}</p>
+        <p><strong>Location:</strong> ${input.locationLabel ?? "Location will be shared in the portal."}</p>
+        <p>${input.dateLabel}</p>
+        <p style="margin-top: 20px; font-weight: 600;">The League</p>
       </div>
     `
   });

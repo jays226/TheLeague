@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/league-game-notifications",
+      "schedule": "5 * * * *"
+    }
+  ]
+}
+

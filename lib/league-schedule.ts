@@ -199,7 +199,7 @@ export function generateSlotSchedule(slotId: string, teams: SlotTeam[]) {
         timeLabel: slot.timeLabel,
         week: index + 1,
         matchDate,
-        dateLabel: `${formatSeasonDate(matchDate)} • ${slot.timeLabel}`,
+        dateLabel: `${formatSeasonDate(matchDate)} • ${slot.timeLabel} ET`,
         locationLabel: locationOptions?.[pairingIndex] ?? null,
         homeTeamId: homeTeam.id,
         homeTeamName: homeTeam.teamName,
