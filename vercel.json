@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/league-game-notifications",
-      "schedule": "* * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
