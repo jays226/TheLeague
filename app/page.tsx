@@ -1,7 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export default function HomePage() {
+import { createEmailListSignup } from "@/lib/db";
+
+async function joinEmailListAction(formData: FormData) {
+  "use server";
+
+  await createEmailListSignup(String(formData.get("email") || ""));
+  redirect("/?joined=1");
+}
+
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams: Promise<{ joined?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <main className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-court" />
@@ -32,6 +48,58 @@ export default function HomePage() {
           >
             Login
           </Link>
+          <div className="mt-8 w-full max-w-md rounded-3xl border border-white/70 bg-white/75 p-5 text-left shadow-soft">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/70">
+              Didn&apos;t get the chance to sign up?
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              The League is full for this semester. Add your email to join the list and receive
+              updates about next semester.
+            </p>
+            <form action={joinEmailListAction} className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                className="h-11 flex-1 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                name="email"
+                placeholder="your@email.com"
+                required
+                type="email"
+              />
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                type="submit"
+              >
+                Join list
+              </button>
+            </form>
+            {params.joined ? (
+              <p className="mt-3 text-sm font-medium text-primary">
+                You&apos;re on the list. We&apos;ll send updates about next semester.
+              </p>
+            ) : null}
+            <Link
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold underline-offset-4 hover:underline"
+              href="https://www.instagram.com/theleagueatuva/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-lg bg-[linear-gradient(135deg,#f58529,#dd2a7b,#8134af,#515bd4)] text-white">
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect height="15" rx="4" stroke="currentColor" strokeWidth="2" width="15" x="4.5" y="4.5" />
+                  <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="16.75" cy="7.25" fill="currentColor" r="1" />
+                </svg>
+              </span>
+              <span className="bg-[linear-gradient(90deg,#f58529,#dd2a7b,#8134af)] bg-clip-text text-transparent">
+                Follow our Instagram for updates
+              </span>
+            </Link>
+          </div>
         </div>
       </section>
     </main>

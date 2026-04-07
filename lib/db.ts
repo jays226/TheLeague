@@ -308,6 +308,19 @@ async function ensureBootstrap() {
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS is_waitlist boolean NOT NULL DEFAULT false
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS email_list_signups (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          email text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_email_list_signups_email_unique
+        ON email_list_signups (lower(email))
+      `);
     })();
   }
 
@@ -367,6 +380,23 @@ export type CreateTeamInput = {
   isWaitlist?: boolean;
   accessToken: string;
 };
+
+export async function createEmailListSignup(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  await query(
+    `
+      INSERT INTO email_list_signups (email, created_at)
+      VALUES ($1, now())
+      ON CONFLICT DO NOTHING
+    `,
+    [normalizedEmail]
+  );
+}
 
 export type SlotRecord = {
   id: string;
