@@ -126,6 +126,14 @@ export default async function DashboardPage({
             </div>
           </div>
           <div className="flex gap-3">
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+              href="https://www.instagram.com/theleagueatuva/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Instagram
+            </Link>
             {team.payment_status === "approved" && !team.is_waitlist ? (
               <Link
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"

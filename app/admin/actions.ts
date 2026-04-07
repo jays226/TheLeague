@@ -223,6 +223,10 @@ export async function saveGameResultAction(formData: FormData) {
   const rawAwayTeamWins = String(formData.get("awayTeamWins") || "").trim();
   const homeTeamWins = rawHomeTeamWins ? Number(rawHomeTeamWins) : null;
   const awayTeamWins = rawAwayTeamWins ? Number(rawAwayTeamWins) : null;
+  const forfeitingTeamId = String(formData.get("forfeitingTeamId") || "").trim() || null;
+  const homeTeamId = String(formData.get("homeTeamId") || "");
+  const awayTeamId = String(formData.get("awayTeamId") || "");
+  const resultType = forfeitingTeamId ? "forfeit" : "standard";
 
   if ((rawHomeTeamWins && !Number.isInteger(homeTeamWins)) || (rawAwayTeamWins && !Number.isInteger(awayTeamWins))) {
     throw new Error("Manual scores must be whole numbers.");
@@ -245,15 +249,21 @@ export async function saveGameResultAction(formData: FormData) {
     throw new Error("Manual result cannot be a tie.");
   }
 
+  if (forfeitingTeamId && forfeitingTeamId !== homeTeamId && forfeitingTeamId !== awayTeamId) {
+    throw new Error("Forfeiting team must be one of the scheduled teams.");
+  }
+
   await saveLeagueGameResult({
     slotId: String(formData.get("slotId") || ""),
     week: Number(formData.get("week") || 0),
     matchDate: String(formData.get("matchDate") || ""),
-    homeTeamId: String(formData.get("homeTeamId") || ""),
-    awayTeamId: String(formData.get("awayTeamId") || ""),
+    homeTeamId,
+    awayTeamId,
     winnerTeamId,
     homeTeamWins,
-    awayTeamWins
+    awayTeamWins,
+    resultType,
+    forfeitingTeamId: resultType === "forfeit" ? forfeitingTeamId : null
   });
 
   revalidatePath("/admin");
