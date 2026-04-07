@@ -147,7 +147,9 @@ export async function processLeagueGameNotifications(now = new Date()) {
           awayTeamId: game.awayTeamId,
           winnerTeamId: loneSubmission.winner_team_id,
           homeTeamWins: loneSubmission.home_team_wins,
-          awayTeamWins: loneSubmission.away_team_wins
+          awayTeamWins: loneSubmission.away_team_wins,
+          resultType: loneSubmission.result_type,
+          forfeitingTeamId: loneSubmission.forfeiting_team_id
         });
         await createGameNotificationEvent({
           notificationType: "single_submission_finalized",

@@ -116,13 +116,27 @@ function redirectScheduleWithMessage(message: string, tone: "success" | "error")
 }
 
 function submissionsMatch(
-  left: { winnerTeamId: string; homeTeamWins: number; awayTeamWins: number },
-  right: { winner_team_id: string; home_team_wins: number; away_team_wins: number }
+  left: {
+    winnerTeamId: string;
+    homeTeamWins: number;
+    awayTeamWins: number;
+    resultType: "standard" | "forfeit";
+    forfeitingTeamId: string | null;
+  },
+  right: {
+    winner_team_id: string;
+    home_team_wins: number;
+    away_team_wins: number;
+    result_type: "standard" | "forfeit";
+    forfeiting_team_id: string | null;
+  }
 ) {
   return (
     left.winnerTeamId === right.winner_team_id &&
     left.homeTeamWins === right.home_team_wins &&
-    left.awayTeamWins === right.away_team_wins
+    left.awayTeamWins === right.away_team_wins &&
+    left.resultType === right.result_type &&
+    left.forfeitingTeamId === right.forfeiting_team_id
   );
 }
 
@@ -138,6 +152,8 @@ export async function submitGameResultAction(formData: FormData) {
     const winnerTeamId = String(formData.get("winnerTeamId") || "");
     const homeTeamWins = Number(formData.get("homeTeamWins") || 0);
     const awayTeamWins = Number(formData.get("awayTeamWins") || 0);
+    const resultType = String(formData.get("resultType") || "standard") === "forfeit" ? "forfeit" : "standard";
+    const forfeitingTeamId = String(formData.get("forfeitingTeamId") || "").trim() || null;
 
     const scheduledGames = await listLeagueGamesForTeam(team.id);
     const game = scheduledGames.find(
@@ -170,6 +186,14 @@ export async function submitGameResultAction(formData: FormData) {
 
     if (winnerTeamId !== homeTeamId && winnerTeamId !== awayTeamId) {
       throw new Error("Choose one of the two teams as the winner.");
+    }
+
+    if (
+      resultType === "forfeit" &&
+      forfeitingTeamId !== homeTeamId &&
+      forfeitingTeamId !== awayTeamId
+    ) {
+      throw new Error("Choose which team forfeited.");
     }
 
     if (
@@ -207,7 +231,9 @@ export async function submitGameResultAction(formData: FormData) {
       submittingTeamId: team.id,
       winnerTeamId,
       homeTeamWins,
-      awayTeamWins
+      awayTeamWins,
+      resultType,
+      forfeitingTeamId
     });
 
     if (
@@ -216,7 +242,9 @@ export async function submitGameResultAction(formData: FormData) {
         {
           winnerTeamId,
           homeTeamWins,
-          awayTeamWins
+          awayTeamWins,
+          resultType,
+          forfeitingTeamId
         },
         opponentSubmission
       ) &&
@@ -226,7 +254,9 @@ export async function submitGameResultAction(formData: FormData) {
           {
             winnerTeamId,
             homeTeamWins,
-            awayTeamWins
+            awayTeamWins,
+            resultType,
+            forfeitingTeamId
           },
           teamSubmission
         )

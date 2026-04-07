@@ -95,6 +95,24 @@ export function ScoreReportPanel({
           <input name="timeLabel" type="hidden" value={timeLabel} />
           <input name="homeTeamId" type="hidden" value={homeTeamId} />
           <input name="awayTeamId" type="hidden" value={awayTeamId} />
+          <input
+            name="resultType"
+            type="hidden"
+            value={reportType === "standard" ? "standard" : "forfeit"}
+          />
+          <input
+            name="forfeitingTeamId"
+            type="hidden"
+            value={
+              reportType === "team-forfeit"
+                ? currentTeamId
+                : reportType === "opponent-forfeit"
+                  ? currentTeamIsHome
+                    ? awayTeamId
+                    : homeTeamId
+                  : ""
+            }
+          />
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">

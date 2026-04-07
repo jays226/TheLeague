@@ -20,6 +20,22 @@ function formatEasternTimestamp(value: string) {
   }).format(new Date(value))} ET`;
 }
 
+function getForfeitLabel(input: {
+  forfeitingTeamId: string | null;
+  homeTeamId: string;
+  homeTeamName: string;
+  awayTeamId: string;
+  awayTeamName: string;
+}) {
+  if (!input.forfeitingTeamId) {
+    return "Forfeit";
+  }
+
+  return `Forfeit by ${
+    input.forfeitingTeamId === input.homeTeamId ? input.homeTeamName : input.awayTeamName
+  }`;
+}
+
 export default async function AdminGamesPage({
   searchParams
 }: {
@@ -110,7 +126,17 @@ export default async function AdminGamesPage({
                     {game.winnerTeamId
                       ? `Current recorded result: ${
                           game.homeTeamWins !== null && game.awayTeamWins !== null
-                            ? `${game.homeTeamWins}-${game.awayTeamWins}`
+                            ? `${game.homeTeamWins}-${game.awayTeamWins}${
+                                game.resultType === "forfeit"
+                                  ? ` (${getForfeitLabel({
+                                      forfeitingTeamId: game.forfeitingTeamId,
+                                      homeTeamId: game.homeTeamId,
+                                      homeTeamName: game.homeTeamName,
+                                      awayTeamId: game.awayTeamId,
+                                      awayTeamName: game.awayTeamName
+                                    })})`
+                                  : ""
+                              }`
                             : game.winnerTeamId === game.homeTeamId
                               ? `${game.homeTeamName} win`
                               : `${game.awayTeamName} win`
@@ -141,6 +167,17 @@ export default async function AdminGamesPage({
                               <p>
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
+                              {submission.result_type === "forfeit" ? (
+                                <p>
+                                  {getForfeitLabel({
+                                    forfeitingTeamId: submission.forfeiting_team_id,
+                                    homeTeamId: game.homeTeamId,
+                                    homeTeamName: game.homeTeamName,
+                                    awayTeamId: game.awayTeamId,
+                                    awayTeamName: game.awayTeamName
+                                  })}
+                                </p>
+                              ) : null}
                               <p className="text-muted-foreground">
                                 Submitted {formatEasternTimestamp(submission.updated_at)}
                               </p>
@@ -174,6 +211,17 @@ export default async function AdminGamesPage({
                               <p>
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
+                              {submission.result_type === "forfeit" ? (
+                                <p>
+                                  {getForfeitLabel({
+                                    forfeitingTeamId: submission.forfeiting_team_id,
+                                    homeTeamId: game.homeTeamId,
+                                    homeTeamName: game.homeTeamName,
+                                    awayTeamId: game.awayTeamId,
+                                    awayTeamName: game.awayTeamName
+                                  })}
+                                </p>
+                              ) : null}
                               <p className="text-muted-foreground">
                                 Submitted {formatEasternTimestamp(submission.updated_at)}
                               </p>
@@ -228,6 +276,19 @@ export default async function AdminGamesPage({
                       <option value="">No result recorded</option>
                       <option value={game.homeTeamId}>{game.homeTeamName}</option>
                       <option value={game.awayTeamId}>{game.awayTeamName}</option>
+                    </select>
+                    <select
+                      className="h-11 min-w-48 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                      defaultValue={
+                        game.resultType === "forfeit" && game.forfeitingTeamId
+                          ? game.forfeitingTeamId
+                          : ""
+                      }
+                      name="forfeitingTeamId"
+                    >
+                      <option value="">No forfeit</option>
+                      <option value={game.homeTeamId}>{game.homeTeamName} forfeited</option>
+                      <option value={game.awayTeamId}>{game.awayTeamName} forfeited</option>
                     </select>
                     <button
                       className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"

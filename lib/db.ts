@@ -223,6 +223,8 @@ async function ensureBootstrap() {
           winner_team_id uuid REFERENCES teams(id) ON DELETE SET NULL,
           home_team_wins integer,
           away_team_wins integer,
+          result_type text NOT NULL DEFAULT 'standard',
+          forfeiting_team_id uuid REFERENCES teams(id) ON DELETE SET NULL,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
@@ -239,6 +241,16 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        ALTER TABLE game_results
+        ADD COLUMN IF NOT EXISTS result_type text NOT NULL DEFAULT 'standard'
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_results
+        ADD COLUMN IF NOT EXISTS forfeiting_team_id uuid REFERENCES teams(id) ON DELETE SET NULL
+      `);
+
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS game_result_submissions (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           slot_id text NOT NULL,
@@ -250,9 +262,21 @@ async function ensureBootstrap() {
           winner_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
           home_team_wins integer NOT NULL,
           away_team_wins integer NOT NULL,
+          result_type text NOT NULL DEFAULT 'standard',
+          forfeiting_team_id uuid REFERENCES teams(id) ON DELETE SET NULL,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_result_submissions
+        ADD COLUMN IF NOT EXISTS result_type text NOT NULL DEFAULT 'standard'
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_result_submissions
+        ADD COLUMN IF NOT EXISTS forfeiting_team_id uuid REFERENCES teams(id) ON DELETE SET NULL
       `);
 
       await pool.query(`
@@ -380,6 +404,8 @@ export type LeagueGameResultRecord = {
   winner_team_id: string | null;
   home_team_wins: number | null;
   away_team_wins: number | null;
+  result_type: "standard" | "forfeit";
+  forfeiting_team_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -412,6 +438,8 @@ export type LeagueGameSubmissionRecord = {
   winner_team_id: string;
   home_team_wins: number;
   away_team_wins: number;
+  result_type: "standard" | "forfeit";
+  forfeiting_team_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -430,6 +458,8 @@ export type LeagueGameRecord = LeagueGameWithResult & {
   id?: string;
   homeTeamWins: number | null;
   awayTeamWins: number | null;
+  resultType: "standard" | "forfeit";
+  forfeitingTeamId: string | null;
   submissions: LeagueGameSubmissionRecord[];
 };
 
@@ -1007,7 +1037,9 @@ function resolveLeagueGameResult(
     return {
       winnerTeamId: adminResult.winner_team_id,
       homeTeamWins: adminResult.home_team_wins,
-      awayTeamWins: adminResult.away_team_wins
+      awayTeamWins: adminResult.away_team_wins,
+      resultType: adminResult.result_type,
+      forfeitingTeamId: adminResult.forfeiting_team_id
     };
   }
 
@@ -1015,7 +1047,9 @@ function resolveLeagueGameResult(
     return {
       winnerTeamId: null,
       homeTeamWins: null,
-      awayTeamWins: null
+      awayTeamWins: null,
+      resultType: "standard" as const,
+      forfeitingTeamId: null
     };
   }
 
@@ -1024,21 +1058,27 @@ function resolveLeagueGameResult(
     (submission) =>
       submission.winner_team_id === firstSubmission.winner_team_id &&
       submission.home_team_wins === firstSubmission.home_team_wins &&
-      submission.away_team_wins === firstSubmission.away_team_wins
+      submission.away_team_wins === firstSubmission.away_team_wins &&
+      submission.result_type === firstSubmission.result_type &&
+      submission.forfeiting_team_id === firstSubmission.forfeiting_team_id
   );
 
   if (!isAgreement) {
     return {
       winnerTeamId: null,
       homeTeamWins: null,
-      awayTeamWins: null
+      awayTeamWins: null,
+      resultType: "standard" as const,
+      forfeitingTeamId: null
     };
   }
 
   return {
     winnerTeamId: firstSubmission.winner_team_id,
     homeTeamWins: firstSubmission.home_team_wins,
-    awayTeamWins: firstSubmission.away_team_wins
+    awayTeamWins: firstSubmission.away_team_wins,
+    resultType: firstSubmission.result_type,
+    forfeitingTeamId: firstSubmission.forfeiting_team_id
   };
 }
 
@@ -1127,6 +1167,8 @@ export async function listLeagueGames() {
         winnerTeamId: resolvedResult.winnerTeamId,
         homeTeamWins: resolvedResult.homeTeamWins,
         awayTeamWins: resolvedResult.awayTeamWins,
+        resultType: resolvedResult.resultType,
+        forfeitingTeamId: resolvedResult.forfeitingTeamId,
         submissions: gameSubmissions
       } satisfies LeagueGameRecord;
     })
@@ -1157,6 +1199,8 @@ export async function saveLeagueGameResult(input: {
   winnerTeamId: string | null;
   homeTeamWins?: number | null;
   awayTeamWins?: number | null;
+  resultType?: "standard" | "forfeit";
+  forfeitingTeamId?: string | null;
 }) {
   if (!input.winnerTeamId) {
     await query(
@@ -1187,15 +1231,19 @@ export async function saveLeagueGameResult(input: {
         winner_team_id,
         home_team_wins,
         away_team_wins,
+        result_type,
+        forfeiting_team_id,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())
       ON CONFLICT (slot_id, week, home_team_id, away_team_id)
       DO UPDATE SET
         winner_team_id = EXCLUDED.winner_team_id,
         home_team_wins = EXCLUDED.home_team_wins,
         away_team_wins = EXCLUDED.away_team_wins,
+        result_type = EXCLUDED.result_type,
+        forfeiting_team_id = EXCLUDED.forfeiting_team_id,
         match_date = EXCLUDED.match_date,
         updated_at = now()
     `,
@@ -1207,7 +1255,9 @@ export async function saveLeagueGameResult(input: {
       input.awayTeamId,
       input.winnerTeamId,
       input.homeTeamWins ?? null,
-      input.awayTeamWins ?? null
+      input.awayTeamWins ?? null,
+      input.resultType ?? "standard",
+      input.forfeitingTeamId ?? null
     ]
   );
 }
@@ -1222,6 +1272,8 @@ export async function submitLeagueGameResult(input: {
   winnerTeamId: string;
   homeTeamWins: number;
   awayTeamWins: number;
+  resultType?: "standard" | "forfeit";
+  forfeitingTeamId?: string | null;
 }) {
   await query(
     `
@@ -1235,15 +1287,19 @@ export async function submitLeagueGameResult(input: {
         winner_team_id,
         home_team_wins,
         away_team_wins,
+        result_type,
+        forfeiting_team_id,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
       ON CONFLICT (slot_id, week, home_team_id, away_team_id, submitting_team_id)
       DO UPDATE SET
         winner_team_id = EXCLUDED.winner_team_id,
         home_team_wins = EXCLUDED.home_team_wins,
         away_team_wins = EXCLUDED.away_team_wins,
+        result_type = EXCLUDED.result_type,
+        forfeiting_team_id = EXCLUDED.forfeiting_team_id,
         match_date = EXCLUDED.match_date,
         updated_at = now()
     `,
@@ -1256,7 +1312,9 @@ export async function submitLeagueGameResult(input: {
       input.submittingTeamId,
       input.winnerTeamId,
       input.homeTeamWins,
-      input.awayTeamWins
+      input.awayTeamWins,
+      input.resultType ?? "standard",
+      input.forfeitingTeamId ?? null
     ]
   );
 }

@@ -24,6 +24,21 @@ function getCurrentPortalTime() {
   return new Date();
 }
 
+function getForfeitLabel(input: {
+  forfeitingTeamId: string | null;
+  homeTeamId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+}) {
+  if (!input.forfeitingTeamId) {
+    return "forfeit";
+  }
+
+  return `forfeit by ${
+    input.forfeitingTeamId === input.homeTeamId ? input.homeTeamName : input.awayTeamName
+  }`;
+}
+
 export default async function AppPage({
   searchParams
 }: {
@@ -111,6 +126,14 @@ export default async function AppPage({
             </div>
           </div>
           <div className="flex gap-3">
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+              href="https://www.instagram.com/theleagueatuva/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Instagram
+            </Link>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
               href="/app/dashboard"
@@ -216,6 +239,18 @@ export default async function AppPage({
                           {currentMatchup.teamSubmission.home_team_wins}-
                           {currentMatchup.teamSubmission.away_team_wins}
                         </span>
+                        {currentMatchup.teamSubmission.result_type === "forfeit" ? (
+                          <span className="ml-1">
+                            (
+                            {getForfeitLabel({
+                              forfeitingTeamId: currentMatchup.teamSubmission.forfeiting_team_id,
+                              homeTeamId: currentMatchup.homeTeamId,
+                              homeTeamName: currentMatchup.homeTeamName,
+                              awayTeamName: currentMatchup.awayTeamName
+                            })}
+                            )
+                          </span>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -427,7 +462,16 @@ export default async function AppPage({
                       {game.winnerTeamId
                         ? `Recorded result: ${
                             game.homeTeamWins !== null && game.awayTeamWins !== null
-                              ? `${game.homeTeamWins}-${game.awayTeamWins}`
+                              ? `${game.homeTeamWins}-${game.awayTeamWins}${
+                                  game.resultType === "forfeit"
+                                    ? ` (${getForfeitLabel({
+                                        forfeitingTeamId: game.forfeitingTeamId,
+                                        homeTeamId: game.homeTeamId,
+                                        homeTeamName: game.homeTeamName,
+                                        awayTeamName: game.awayTeamName
+                                      })})`
+                                    : ""
+                                }`
                               : game.winnerTeamId === team.id
                                 ? "Win"
                                 : "Loss"
