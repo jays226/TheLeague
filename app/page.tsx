@@ -39,7 +39,7 @@ export default async function HomePage({
             The League
           </h1>
           <p className="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary/70">
-            Team Portal
+            Regular Season Portal
           </p>
           <p className="mt-4 max-w-md text-base leading-7 text-muted-foreground">
             Log in to view your dashboard, weekly schedule, and match reporting.
