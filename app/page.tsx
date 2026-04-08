@@ -52,7 +52,7 @@ export default async function HomePage({
           </Link>
           <div className="mt-6 w-full max-w-md rounded-3xl border border-[rgba(245,132,79,0.22)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.9))] p-5 text-left shadow-soft">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/70">
-              NEW • Pop-Up Tournament • April 18
+              NEW • The Party Pop-Up Tournament • April 18
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Sudden death tournament from 12 PM-3 PM at Perry Fishburne Tennis Courts in the

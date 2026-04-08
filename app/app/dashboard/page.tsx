@@ -228,7 +228,7 @@ export default async function DashboardPage({
 
         <Card className="border-[rgba(245,132,79,0.22)] bg-[linear-gradient(135deg,rgba(245,132,79,0.12),rgba(255,255,255,0.92))] p-6">
           <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-            NEW • Pop-Up Tournament
+            NEW • The Party Pop-Up Tournament
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
             April 18 • 12 PM-3 PM
