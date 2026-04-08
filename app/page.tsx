@@ -62,6 +62,7 @@ export default async function HomePage({
               $30/team • $130 cash prize • 16 spots available. Your spot is confirmed once Venmo
               payment is received.
             </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">Featuring a live DJ.</p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Questions? theleagueatuva@gmail.com
             </p>
