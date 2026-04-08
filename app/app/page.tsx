@@ -179,8 +179,8 @@ export default async function AppPage({
             Dell, by Old Dorms.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            $30/team • 16 spots available. Your spot is confirmed once Venmo payment is received,
-            and you&apos;ll get an email once payment has been processed.
+            $30/team • $130 cash prize • 16 spots available. Your spot is confirmed once Venmo
+            payment is received, and you&apos;ll get an email once payment has been processed.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Questions? theleagueatuva@gmail.com

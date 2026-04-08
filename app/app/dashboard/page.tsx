@@ -237,8 +237,8 @@ export default async function DashboardPage({
             Sudden death tournament at Perry Fishburne Tennis Courts in the Dell, by Old Dorms.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            $30/team • 16 spots available. Your spot is confirmed once payment is received via
-            Venmo, and you&apos;ll receive an email once your spot is secured.
+            $30/team • $130 cash prize • 16 spots available. Your spot is confirmed once payment
+            is received via Venmo, and you&apos;ll receive an email once your spot is secured.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Questions? theleagueatuva@gmail.com
