@@ -125,17 +125,17 @@ export default async function AppPage({
                 This is now your main portal page: see your weekly matchups, your current slot, and
                 standings across every time slot in one place.
               </p>
+              <Link
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-[#E1306C] px-4 text-sm font-semibold text-white transition hover:bg-[#c72b5f]"
+                href="https://www.instagram.com/theleagueatuva/"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Instagram
+              </Link>
             </div>
           </div>
           <div className="flex gap-3">
-            <Link
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-              href="https://www.instagram.com/theleagueatuva/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Instagram
-            </Link>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
               href="/app/dashboard"
@@ -179,8 +179,7 @@ export default async function AppPage({
             Dell, by Old Dorms.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            $30/team • $130 cash prize • 16 spots available. Your spot is confirmed once Venmo
-            payment is received, and you&apos;ll get an email once payment has been processed.
+            $30/team • $130 cash prize • 16 spots available.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Featuring a live DJ.</p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
