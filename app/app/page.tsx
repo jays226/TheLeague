@@ -131,7 +131,7 @@ export default async function AppPage({
                 rel="noreferrer"
                 target="_blank"
               >
-                Instagram
+                Follow our Instagram!
               </Link>
             </div>
           </div>
@@ -181,7 +181,9 @@ export default async function AppPage({
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             $30/team • $130 cash prize • 16 spots available.
           </p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Featuring a live DJ.</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
+            Featuring a live DJ.
+          </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Questions? theleagueatuva@gmail.com
           </p>
