@@ -172,7 +172,7 @@ export default async function AppPage({
             NEW • The Party Pop-Up Tournament
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-            April 18 • 12 PM - 2 PM
+            April 18 • 12 PM - 3 PM
           </h2>
           <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
             We&apos;re hosting a sudden death tournament at Perry Fishburne Tennis Courts in the

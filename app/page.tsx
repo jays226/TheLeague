@@ -55,7 +55,7 @@ export default async function HomePage({
               NEW • The Party Pop-Up Tournament • April 18
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Sudden death tournament from 12 PM - 2 PM at Perry Fishburne Tennis Courts in the
+              Sudden death tournament from 12 PM - 3 PM at Perry Fishburne Tennis Courts in the
               Dell, by Old Dorms.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
