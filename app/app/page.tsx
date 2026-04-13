@@ -172,14 +172,14 @@ export default async function AppPage({
             NEW • The Party Pop-Up Tournament
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-            April 18 • 12 PM-3 PM
+            April 18 • 12 PM - 2 PM
           </h2>
           <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
             We&apos;re hosting a sudden death tournament at Perry Fishburne Tennis Courts in the
             Dell, by Old Dorms.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            $30/team • $130 cash prize • 16 spots available.
+            $30/team • $100 cash prize • 16 spots available.
           </p>
           <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
             Featuring a live DJ.
