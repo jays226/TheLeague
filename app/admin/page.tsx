@@ -19,6 +19,7 @@ import {
   type AdminTeamRow,
   getAdminSession,
   getReservationStats,
+  listLeagueStandings,
   listAllReservations,
   listSlots,
   purgeExpiredAdminSessions,
@@ -27,12 +28,13 @@ import {
   type SlotRecord
 } from "@/lib/db";
 import { env } from "@/lib/env";
+import { generatePlayoffSeeds } from "@/lib/league-schedule";
 import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
 
 export default async function AdminPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; showSeeds?: string }>;
 }) {
   const params = await searchParams;
   const cookieStore = await cookies();
@@ -88,6 +90,8 @@ export default async function AdminPage({
   const slots = (await listSlots()) as SlotRecord[];
   const reservations = (await listAllReservations()) as ReservationRecord[];
   const stats = await getReservationStats();
+  const standingsBySlot = await listLeagueStandings();
+  const playoffSeeds = generatePlayoffSeeds(standingsBySlot);
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -138,6 +142,74 @@ export default async function AdminPage({
             </Card>
           ))}
         </div>
+
+        <Card className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Playoffs</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                Generate one league-wide seeding across every slot.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Teams are ranked by win percentage, then wins, then team name.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <form action="/admin" method="get">
+                <input name="showSeeds" type="hidden" value="1" />
+                <button
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                  type="submit"
+                >
+                  Generate Playoff Seeding
+                </button>
+              </form>
+              {params.showSeeds ? (
+                <Link
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
+                  href="/admin"
+                >
+                  Hide seeding
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          {params.showSeeds ? (
+            playoffSeeds.length > 0 ? (
+              <div className="mt-5 overflow-x-auto rounded-2xl bg-white/80">
+                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                  <thead>
+                    <tr className="text-primary/70">
+                      <th className="px-4 py-3 font-semibold">Seed</th>
+                      <th className="px-4 py-3 font-semibold">Team</th>
+                      <th className="px-4 py-3 font-semibold">Slot</th>
+                      <th className="px-4 py-3 font-semibold">W</th>
+                      <th className="px-4 py-3 font-semibold">L</th>
+                      <th className="px-4 py-3 font-semibold">Pct</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playoffSeeds.map((row) => (
+                      <tr className="border-t border-border/60" key={row.teamId}>
+                        <td className="px-4 py-3 font-semibold text-foreground">{row.seed}</td>
+                        <td className="px-4 py-3 text-foreground">{row.teamName}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.slotLabel}</td>
+                        <td className="px-4 py-3 text-foreground">{row.wins}</td>
+                        <td className="px-4 py-3 text-foreground">{row.losses}</td>
+                        <td className="px-4 py-3 text-foreground">{row.percentage.toFixed(3)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
+                No standings data is available yet, so playoff seeding could not be generated.
+              </div>
+            )
+          ) : null}
+        </Card>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">

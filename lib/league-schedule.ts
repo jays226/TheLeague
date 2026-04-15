@@ -37,6 +37,17 @@ export type SlotStandings = {
   teams: SlotStandingsRow[];
 };
 
+export type PlayoffSeedRow = {
+  seed: number;
+  teamId: string;
+  teamName: string;
+  slotId: string;
+  slotLabel: string;
+  wins: number;
+  losses: number;
+  percentage: number;
+};
+
 const seasonDatesByDay = {
   monday: ["2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20"],
   tuesday: ["2026-03-31", "2026-04-07", "2026-04-14", "2026-04-21"],
@@ -277,4 +288,59 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
         )
     }))
     .sort((left, right) => left.label.localeCompare(right.label)) satisfies SlotStandings[];
+}
+
+function normalizeWholeNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function normalizePercentage(input: {
+  wins: number;
+  losses: number;
+  percentage: unknown;
+}) {
+  if (typeof input.percentage === "number" && Number.isFinite(input.percentage)) {
+    return input.percentage;
+  }
+
+  const totalGames = input.wins + input.losses;
+  return totalGames > 0 ? input.wins / totalGames : 0;
+}
+
+export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
+  const rows = standingsBySlot.flatMap((slot) =>
+    (slot?.teams ?? []).map((team) => {
+      const wins = normalizeWholeNumber(team?.wins);
+      const losses = normalizeWholeNumber(team?.losses);
+
+      return {
+        seed: 0,
+        teamId: team?.teamId ?? "",
+        teamName: team?.teamName ?? "Unknown team",
+        slotId: slot?.slotId ?? "",
+        slotLabel: slot?.label ?? "Unknown slot",
+        wins,
+        losses,
+        percentage: normalizePercentage({
+          wins,
+          losses,
+          percentage: team?.percentage
+        })
+      } satisfies PlayoffSeedRow;
+    })
+  );
+
+  return rows
+    .sort(
+      (left, right) =>
+        right.percentage - left.percentage ||
+        right.wins - left.wins ||
+        left.teamName.localeCompare(right.teamName, undefined, { sensitivity: "accent" }) ||
+        left.slotLabel.localeCompare(right.slotLabel, undefined, { sensitivity: "accent" }) ||
+        left.teamId.localeCompare(right.teamId)
+    )
+    .map((row, index) => ({
+      ...row,
+      seed: index + 1
+    })) satisfies PlayoffSeedRow[];
 }
