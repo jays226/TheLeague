@@ -151,7 +151,7 @@ export default async function AdminPage({
                 Generate one league-wide seeding across every slot.
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Teams are ranked by win percentage, then wins, then team name.
+                Teams are ranked by win percentage, then wins, then team name. Forfeits are shown for context.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -186,6 +186,7 @@ export default async function AdminPage({
                       <th className="px-4 py-3 font-semibold">Slot</th>
                       <th className="px-4 py-3 font-semibold">W</th>
                       <th className="px-4 py-3 font-semibold">L</th>
+                      <th className="px-4 py-3 font-semibold">F</th>
                       <th className="px-4 py-3 font-semibold">Pct</th>
                     </tr>
                   </thead>
@@ -197,6 +198,7 @@ export default async function AdminPage({
                         <td className="px-4 py-3 text-muted-foreground">{row.slotLabel}</td>
                         <td className="px-4 py-3 text-foreground">{row.wins}</td>
                         <td className="px-4 py-3 text-foreground">{row.losses}</td>
+                        <td className="px-4 py-3 text-foreground">{row.forfeits}</td>
                         <td className="px-4 py-3 text-foreground">{row.percentage.toFixed(3)}</td>
                       </tr>
                     ))}

@@ -21,6 +21,8 @@ export type GeneratedLeagueGame = {
 
 export type LeagueGameWithResult = GeneratedLeagueGame & {
   winnerTeamId: string | null;
+  resultType?: "standard" | "forfeit";
+  forfeitingTeamId?: string | null;
 };
 
 export type SlotStandingsRow = {
@@ -28,6 +30,7 @@ export type SlotStandingsRow = {
   teamName: string;
   wins: number;
   losses: number;
+  forfeits: number;
   percentage: number;
 };
 
@@ -45,6 +48,7 @@ export type PlayoffSeedRow = {
   slotLabel: string;
   wins: number;
   losses: number;
+  forfeits: number;
   percentage: number;
 };
 
@@ -244,6 +248,7 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
           teamName,
           wins: 0,
           losses: 0,
+          forfeits: 0,
           percentage: 0
         });
       }
@@ -266,6 +271,9 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
 
     slotStanding.teams.get(game.winnerTeamId)!.wins += 1;
     slotStanding.teams.get(loserTeamId)!.losses += 1;
+    if (game.resultType === "forfeit" && game.forfeitingTeamId === loserTeamId) {
+      slotStanding.teams.get(loserTeamId)!.forfeits += 1;
+    }
   }
 
   return [...standingsBySlot.entries()]
@@ -312,6 +320,7 @@ export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
     (slot?.teams ?? []).map((team) => {
       const wins = normalizeWholeNumber(team?.wins);
       const losses = normalizeWholeNumber(team?.losses);
+      const forfeits = normalizeWholeNumber(team?.forfeits);
 
       return {
         seed: 0,
@@ -321,6 +330,7 @@ export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
         slotLabel: slot?.label ?? "Unknown slot",
         wins,
         losses,
+        forfeits,
         percentage: normalizePercentage({
           wins,
           losses,
