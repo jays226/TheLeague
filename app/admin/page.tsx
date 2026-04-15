@@ -106,51 +106,33 @@ export default async function AdminPage({
   const now = new Date();
   const todayEastern = getCurrentEasternDateKey(now);
   const teamById = new Map(teams.map((team) => [team.id, team]));
-  const missingScoreTeams = leagueGames
+  const missingScoreMatchups = leagueGames
     .filter((game) => game.matchDate <= todayEastern)
     .flatMap((game) => {
       const { opensAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
       const matchEndsAt = new Date(opensAt.getTime() + 60 * 60 * 1000);
 
-      if (now < matchEndsAt) {
+      if (now < matchEndsAt || game.submissions.length > 0 || game.winnerTeamId) {
         return [];
       }
 
-      const homeSubmitted = game.submissions.some(
-        (submission) => submission.submitting_team_id === game.homeTeamId
-      );
-      const awaySubmitted = game.submissions.some(
-        (submission) => submission.submitting_team_id === game.awayTeamId
-      );
-      const missingEntries = [
-        !homeSubmitted
-          ? {
-              teamId: game.homeTeamId,
-              teamName: game.homeTeamName
-            }
-          : null,
-        !awaySubmitted
-          ? {
-              teamId: game.awayTeamId,
-              teamName: game.awayTeamName
-            }
-          : null
-      ].filter((entry): entry is { teamId: string; teamName: string } => Boolean(entry));
+      const homeTeam = teamById.get(game.homeTeamId);
+      const awayTeam = teamById.get(game.awayTeamId);
 
-      return missingEntries.map((entry) => {
-        const team = teamById.get(entry.teamId);
-
-        return {
-          ...entry,
-          emails: [team?.player_one_email, team?.player_two_email].filter(
-            (value): value is string => Boolean(value)
-          ),
-          matchLabel: `Week ${game.week} • ${game.dayLabel} at ${game.timeLabel}`,
-          opponentName: entry.teamId === game.homeTeamId ? game.awayTeamName : game.homeTeamName
-        };
-      });
+      return [
+        {
+          matchupLabel: `${game.homeTeamName} vs ${game.awayTeamName}`,
+          emails: [
+            homeTeam?.player_one_email,
+            homeTeam?.player_two_email,
+            awayTeam?.player_one_email,
+            awayTeam?.player_two_email
+          ].filter((value): value is string => Boolean(value)),
+          matchLabel: `Week ${game.week} • ${game.dayLabel} at ${game.timeLabel}`
+        }
+      ];
     });
-  const missingScoreEmails = [...new Set(missingScoreTeams.flatMap((team) => team.emails))].join(",");
+  const missingScoreEmails = [...new Set(missingScoreMatchups.flatMap((game) => game.emails))].join(",");
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -206,7 +188,7 @@ export default async function AdminPage({
                 Missing score submissions
               </p>
               <p className="mt-2 text-lg font-semibold text-foreground">
-                Teams that still have not logged scores for finished matches
+                Finished matchups that still have no score recorded
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Only matches that have already finished as of the current Eastern Time are included here.
@@ -214,7 +196,7 @@ export default async function AdminPage({
             </div>
           </div>
 
-          {missingScoreTeams.length > 0 ? (
+          {missingScoreMatchups.length > 0 ? (
             <>
               <div className="mt-5 rounded-2xl bg-white/80 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
@@ -224,12 +206,10 @@ export default async function AdminPage({
               </div>
 
               <div className="mt-4 grid gap-3">
-                {missingScoreTeams.map((entry) => (
-                  <div className="rounded-2xl bg-white/80 p-4" key={`${entry.matchLabel}:${entry.teamId}`}>
-                    <p className="text-base font-semibold text-foreground">{entry.teamName}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {entry.matchLabel} • vs {entry.opponentName}
-                    </p>
+                {missingScoreMatchups.map((entry) => (
+                  <div className="rounded-2xl bg-white/80 p-4" key={`${entry.matchLabel}:${entry.matchupLabel}`}>
+                    <p className="text-base font-semibold text-foreground">{entry.matchupLabel}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{entry.matchLabel}</p>
                     <p className="mt-2 text-sm text-foreground">{entry.emails.join(",")}</p>
                   </div>
                 ))}
@@ -237,7 +217,7 @@ export default async function AdminPage({
             </>
           ) : (
             <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
-              No teams are currently missing a score submission for any finished match.
+              No finished matchups are currently missing a recorded score.
             </div>
           )}
         </Card>
