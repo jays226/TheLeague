@@ -105,63 +105,51 @@ export default async function AdminPage({
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const now = new Date();
   const todayEastern = getCurrentEasternDateKey(now);
-  const currentWeek = leagueGames
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+  const missingScoreTeams = leagueGames
     .filter((game) => game.matchDate <= todayEastern)
-    .reduce<number | null>((latestWeek, game) => {
-      if (latestWeek === null || game.week > latestWeek) {
-        return game.week;
+    .flatMap((game) => {
+      const { opensAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
+      const matchEndsAt = new Date(opensAt.getTime() + 60 * 60 * 1000);
+
+      if (now < matchEndsAt) {
+        return [];
       }
 
-      return latestWeek;
-    }, null);
-  const teamById = new Map(teams.map((team) => [team.id, team]));
-  const missingScoreTeams =
-    currentWeek === null
-      ? []
-      : leagueGames
-          .filter((game) => game.week === currentWeek)
-          .flatMap((game) => {
-            const { opensAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
-            const matchEndsAt = new Date(opensAt.getTime() + 60 * 60 * 1000);
-
-            if (now < matchEndsAt) {
-              return [];
+      const homeSubmitted = game.submissions.some(
+        (submission) => submission.submitting_team_id === game.homeTeamId
+      );
+      const awaySubmitted = game.submissions.some(
+        (submission) => submission.submitting_team_id === game.awayTeamId
+      );
+      const missingEntries = [
+        !homeSubmitted
+          ? {
+              teamId: game.homeTeamId,
+              teamName: game.homeTeamName
             }
+          : null,
+        !awaySubmitted
+          ? {
+              teamId: game.awayTeamId,
+              teamName: game.awayTeamName
+            }
+          : null
+      ].filter((entry): entry is { teamId: string; teamName: string } => Boolean(entry));
 
-            const homeSubmitted = game.submissions.some(
-              (submission) => submission.submitting_team_id === game.homeTeamId
-            );
-            const awaySubmitted = game.submissions.some(
-              (submission) => submission.submitting_team_id === game.awayTeamId
-            );
-            const missingEntries = [
-              !homeSubmitted
-                ? {
-                    teamId: game.homeTeamId,
-                    teamName: game.homeTeamName
-                  }
-                : null,
-              !awaySubmitted
-                ? {
-                    teamId: game.awayTeamId,
-                    teamName: game.awayTeamName
-                  }
-                : null
-            ].filter((entry): entry is { teamId: string; teamName: string } => Boolean(entry));
+      return missingEntries.map((entry) => {
+        const team = teamById.get(entry.teamId);
 
-            return missingEntries.map((entry) => {
-              const team = teamById.get(entry.teamId);
-
-              return {
-                ...entry,
-                emails: [team?.player_one_email, team?.player_two_email].filter(
-                  (value): value is string => Boolean(value)
-                ),
-                matchLabel: `Week ${game.week} • ${game.dayLabel} at ${game.timeLabel}`,
-                opponentName: entry.teamId === game.homeTeamId ? game.awayTeamName : game.homeTeamName
-              };
-            });
-          });
+        return {
+          ...entry,
+          emails: [team?.player_one_email, team?.player_two_email].filter(
+            (value): value is string => Boolean(value)
+          ),
+          matchLabel: `Week ${game.week} • ${game.dayLabel} at ${game.timeLabel}`,
+          opponentName: entry.teamId === game.homeTeamId ? game.awayTeamName : game.homeTeamName
+        };
+      });
+    });
   const missingScoreEmails = [...new Set(missingScoreTeams.flatMap((team) => team.emails))].join(",");
 
   return (
@@ -218,17 +206,12 @@ export default async function AdminPage({
                 Missing score submissions
               </p>
               <p className="mt-2 text-lg font-semibold text-foreground">
-                Teams that still have not logged this week&apos;s finished matches
+                Teams that still have not logged scores for finished matches
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Only matches that have already finished as of the current Eastern Time are included here.
               </p>
             </div>
-            {currentWeek !== null ? (
-              <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary/70">
-                Week {currentWeek}
-              </span>
-            ) : null}
           </div>
 
           {missingScoreTeams.length > 0 ? (
@@ -254,7 +237,7 @@ export default async function AdminPage({
             </>
           ) : (
             <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
-              No teams are currently missing a score submission for this week&apos;s finished matches.
+              No teams are currently missing a score submission for any finished match.
             </div>
           )}
         </Card>
