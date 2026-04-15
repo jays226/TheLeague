@@ -1,7 +1,6 @@
 export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   venmoLink: process.env.NEXT_PUBLIC_VENMO_LINK || "",
-  tournamentFormUrl: process.env.NEXT_PUBLIC_TOURNAMENT_FORM_URL || "",
   databaseUrl: process.env.DATABASE_URL,
   emailVerificationApiKey: process.env.EMAIL_VERIFICATION_API_KEY,
   emailVerificationMode: process.env.EMAIL_VERIFICATION_MODE || "mock",

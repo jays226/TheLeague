@@ -17,7 +17,6 @@ import {
   listSlots
 } from "@/lib/db";
 import { getLeagueGameWindow } from "@/lib/eastern-time";
-import { env } from "@/lib/env";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 
@@ -99,7 +98,6 @@ export default async function AppPage({
     currentMatchup
       ? await getTeamById(currentMatchup.homeTeamId === team.id ? currentMatchup.awayTeamId : currentMatchup.homeTeamId)
       : null;
-  const tournamentFormUrl = env.tournamentFormUrl;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -166,42 +164,6 @@ export default async function AppPage({
             tone={params.tone === "error" ? "warning" : "success"}
           />
         ) : null}
-
-        <Card className="border-[rgba(245,132,79,0.22)] bg-[linear-gradient(135deg,rgba(245,132,79,0.12),rgba(255,255,255,0.92))] p-6">
-          <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-            NEW • The Party Pop-Up Tournament
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-            April 18 • 12 PM - 3 PM
-          </h2>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-            We&apos;re hosting a sudden death tournament at Perry Fishburne Tennis Courts in the
-            Dell, by Old Dorms.
-          </p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            $30/team • $100 cash prize • 16 spots available.
-          </p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
-            Featuring a live DJ.
-          </p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Questions? theleagueatuva@gmail.com
-          </p>
-          {tournamentFormUrl ? (
-            <a
-              className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-              href={tournamentFormUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open tournament signup form
-            </a>
-          ) : (
-            <p className="mt-4 text-sm font-medium text-primary">
-              Add the tournament Google Form link to enable signup here.
-            </p>
-          )}
-        </Card>
 
         {team.is_waitlist ? (
           <Card className="border-[rgba(245,132,79,0.2)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.92))] p-6">

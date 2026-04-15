@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { createEmailListSignup } from "@/lib/db";
-import { env } from "@/lib/env";
 
 async function joinEmailListAction(formData: FormData) {
   "use server";
@@ -18,7 +17,6 @@ export default async function HomePage({
   searchParams: Promise<{ joined?: string }>;
 }) {
   const params = await searchParams;
-  const tournamentFormUrl = env.tournamentFormUrl;
 
   return (
     <main className="relative overflow-hidden">
@@ -50,36 +48,6 @@ export default async function HomePage({
           >
             Login
           </Link>
-          <div className="mt-6 w-full max-w-md rounded-3xl border border-[rgba(245,132,79,0.22)] bg-[linear-gradient(135deg,rgba(245,132,79,0.14),rgba(255,255,255,0.9))] p-5 text-left shadow-soft">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/70">
-              NEW • The Party Pop-Up Tournament • April 18
-            </p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Sudden death tournament from 12 PM - 3 PM at Perry Fishburne Tennis Courts in the
-              Dell, by Old Dorms.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              $30/team • $100 cash prize • 16 spots available.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Featuring a live DJ.</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Questions? theleagueatuva@gmail.com
-            </p>
-            {tournamentFormUrl ? (
-              <a
-                className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-                href={tournamentFormUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Tournament info + signup
-              </a>
-            ) : (
-              <p className="mt-4 text-sm font-medium text-primary">
-                Add the tournament Google Form link to enable signup here.
-              </p>
-            )}
-          </div>
           <div className="mt-8 w-full max-w-md rounded-3xl border border-white/70 bg-white/75 p-5 text-left shadow-soft">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/70">
               Didn&apos;t get the chance to sign up for the regular season?
