@@ -19,6 +19,7 @@ import {
   type AdminTeamRow,
   getAdminSession,
   getReservationStats,
+  listLeagueGames,
   listLeagueStandings,
   listAllReservations,
   listSlots,
@@ -27,9 +28,15 @@ import {
   type ReservationRecord,
   type SlotRecord
 } from "@/lib/db";
+import { getEasternParts, getLeagueGameWindow } from "@/lib/eastern-time";
 import { env } from "@/lib/env";
 import { generatePlayoffSeeds } from "@/lib/league-schedule";
 import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
+
+function getCurrentEasternDateKey(now: Date) {
+  const parts = getEasternParts(now);
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
 
 export default async function AdminPage({
   searchParams
@@ -91,10 +98,71 @@ export default async function AdminPage({
   const reservations = (await listAllReservations()) as ReservationRecord[];
   const stats = await getReservationStats();
   const standingsBySlot = await listLeagueStandings();
+  const leagueGames = await listLeagueGames();
   const playoffSeeds = generatePlayoffSeeds(standingsBySlot);
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const now = new Date();
+  const todayEastern = getCurrentEasternDateKey(now);
+  const currentWeek = leagueGames
+    .filter((game) => game.matchDate <= todayEastern)
+    .reduce<number | null>((latestWeek, game) => {
+      if (latestWeek === null || game.week > latestWeek) {
+        return game.week;
+      }
+
+      return latestWeek;
+    }, null);
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+  const missingScoreTeams =
+    currentWeek === null
+      ? []
+      : leagueGames
+          .filter((game) => game.week === currentWeek)
+          .flatMap((game) => {
+            const { opensAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
+            const matchEndsAt = new Date(opensAt.getTime() + 60 * 60 * 1000);
+
+            if (now < matchEndsAt) {
+              return [];
+            }
+
+            const homeSubmitted = game.submissions.some(
+              (submission) => submission.submitting_team_id === game.homeTeamId
+            );
+            const awaySubmitted = game.submissions.some(
+              (submission) => submission.submitting_team_id === game.awayTeamId
+            );
+            const missingEntries = [
+              !homeSubmitted
+                ? {
+                    teamId: game.homeTeamId,
+                    teamName: game.homeTeamName
+                  }
+                : null,
+              !awaySubmitted
+                ? {
+                    teamId: game.awayTeamId,
+                    teamName: game.awayTeamName
+                  }
+                : null
+            ].filter((entry): entry is { teamId: string; teamName: string } => Boolean(entry));
+
+            return missingEntries.map((entry) => {
+              const team = teamById.get(entry.teamId);
+
+              return {
+                ...entry,
+                emails: [team?.player_one_email, team?.player_two_email].filter(
+                  (value): value is string => Boolean(value)
+                ),
+                matchLabel: `Week ${game.week} • ${game.dayLabel} at ${game.timeLabel}`,
+                opponentName: entry.teamId === game.homeTeamId ? game.awayTeamName : game.homeTeamName
+              };
+            });
+          });
+  const missingScoreEmails = [...new Set(missingScoreTeams.flatMap((team) => team.emails))].join(",");
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -142,6 +210,54 @@ export default async function AdminPage({
             </Card>
           ))}
         </div>
+
+        <Card className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
+                Missing score submissions
+              </p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                Teams that still have not logged this week&apos;s finished matches
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Only matches that have already finished as of the current Eastern Time are included here.
+              </p>
+            </div>
+            {currentWeek !== null ? (
+              <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary/70">
+                Week {currentWeek}
+              </span>
+            ) : null}
+          </div>
+
+          {missingScoreTeams.length > 0 ? (
+            <>
+              <div className="mt-5 rounded-2xl bg-white/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                  Comma-separated emails
+                </p>
+                <p className="mt-2 break-all text-sm text-foreground">{missingScoreEmails}</p>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                {missingScoreTeams.map((entry) => (
+                  <div className="rounded-2xl bg-white/80 p-4" key={`${entry.matchLabel}:${entry.teamId}`}>
+                    <p className="text-base font-semibold text-foreground">{entry.teamName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {entry.matchLabel} • vs {entry.opponentName}
+                    </p>
+                    <p className="mt-2 text-sm text-foreground">{entry.emails.join(",")}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
+              No teams are currently missing a score submission for this week&apos;s finished matches.
+            </div>
+          )}
+        </Card>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
