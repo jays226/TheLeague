@@ -103,6 +103,14 @@ export default async function AdminPage({
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const participantEmails = [
+    ...new Set(
+      teams
+        .filter((team) => !team.is_waitlist)
+        .flatMap((team) => [team.player_one_email, team.player_two_email])
+        .filter((value): value is string => Boolean(value))
+    )
+  ].join(",");
   const now = new Date();
   const todayEastern = getCurrentEasternDateKey(now);
   const teamById = new Map(teams.map((team) => [team.id, team]));
@@ -180,6 +188,19 @@ export default async function AdminPage({
             </Card>
           ))}
         </div>
+
+        <Card className="p-6">
+          <p className="text-sm uppercase tracking-[0.16em] text-primary/65">League participant emails</p>
+          <p className="mt-2 text-lg font-semibold text-foreground">
+            All current regular-season player emails
+          </p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            This includes all non-waitlist teams currently in the league.
+          </p>
+          <div className="mt-5 rounded-2xl bg-white/80 p-4">
+            <p className="break-all text-sm text-foreground">{participantEmails}</p>
+          </div>
+        </Card>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
