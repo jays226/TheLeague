@@ -16,6 +16,7 @@ import {
   listLeagueGames,
   listLeagueGamesForTeam,
   listLeagueStandings,
+  listPlayoffGameResults,
   listPlayoffSeedOverrides,
   listTeamsWithReservations,
   listSlots
@@ -71,6 +72,7 @@ export default async function AppPage({
   const standings = await listLeagueStandings();
   const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
   const playoffSeedOverrides = await listPlayoffSeedOverrides();
+  const playoffGameResults = await listPlayoffGameResults();
   const teams = await listTeamsWithReservations();
   const qualifiedPlayoffSeeds = resolvePlayoffField({
     autoSeeds: playoffSeeds,
@@ -231,7 +233,14 @@ export default async function AppPage({
         ) : (
           <>
             <Card className="p-6">
-              <LiveBracket currentTeamId={team.id} qualifiedSeeds={qualifiedPlayoffSeeds} />
+              <LiveBracket
+                currentTeamId={team.id}
+                qualifiedSeeds={qualifiedPlayoffSeeds}
+                results={playoffGameResults.map((result) => ({
+                  matchupId: result.matchup_id,
+                  winnerTeamId: result.winner_team_id
+                }))}
+              />
             </Card>
 
             <Card className="p-6">

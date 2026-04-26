@@ -8,6 +8,7 @@ import {
   generateSlotSchedule,
   type GeneratedLeagueGame,
   type LeagueGameWithResult,
+  type PlayoffBracketMatchId,
   type SlotStandings,
   type SlotTeam
 } from "@/lib/league-schedule";
@@ -305,6 +306,20 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS playoff_game_results (
+          matchup_id text PRIMARY KEY,
+          winner_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_playoff_game_results_winner_team_id
+        ON playoff_game_results (winner_team_id)
+      `);
+
+      await pool.query(`
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS is_waitlist boolean NOT NULL DEFAULT false
       `);
@@ -517,6 +532,13 @@ export type AdminTeamRow = TeamRecord & {
 export type PlayoffSeedOverrideRecord = {
   seed: number;
   team_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PlayoffGameResultRecord = {
+  matchup_id: PlayoffBracketMatchId;
+  winner_team_id: string;
   created_at: string;
   updated_at: string;
 };
@@ -770,6 +792,38 @@ export async function savePlayoffSeedOverrides(overrides: Array<{ seed: number; 
       );
     }
   });
+}
+
+export async function listPlayoffGameResults() {
+  return query<PlayoffGameResultRecord>(
+    `
+      SELECT matchup_id, winner_team_id, created_at, updated_at
+      FROM playoff_game_results
+      ORDER BY created_at ASC
+    `
+  );
+}
+
+export async function savePlayoffGameResult(input: {
+  matchupId: PlayoffBracketMatchId;
+  winnerTeamId: string | null;
+}) {
+  if (!input.winnerTeamId) {
+    await query("DELETE FROM playoff_game_results WHERE matchup_id = $1", [input.matchupId]);
+    return;
+  }
+
+  await query(
+    `
+      INSERT INTO playoff_game_results (matchup_id, winner_team_id, created_at, updated_at)
+      VALUES ($1, $2, now(), now())
+      ON CONFLICT (matchup_id)
+      DO UPDATE SET
+        winner_team_id = EXCLUDED.winner_team_id,
+        updated_at = now()
+    `,
+    [input.matchupId, input.winnerTeamId]
+  );
 }
 
 export async function approveTeamPayment(teamId: string) {

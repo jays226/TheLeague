@@ -11,10 +11,12 @@ import {
   moveTeamReservationAction,
   logoutAction,
   rejectReservationAction,
+  savePlayoffGameResultAction,
   savePlayoffSeedsAction,
   setTeamWaitlistAction,
   updateTeamAction
 } from "@/app/admin/actions";
+import { LiveBracket } from "@/components/dashboard/live-bracket";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -22,6 +24,7 @@ import {
   getAdminSession,
   getReservationStats,
   listLeagueGames,
+  listPlayoffGameResults,
   listAllReservations,
   listPlayoffSeedOverrides,
   listSlots,
@@ -45,7 +48,6 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{
     error?: string;
-    showSeeds?: string;
     playoffMessage?: string;
     playoffTone?: "success" | "error";
   }>;
@@ -107,6 +109,7 @@ export default async function AdminPage({
   const leagueGames = await listLeagueGames();
   const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
   const playoffSeedOverrides = await listPlayoffSeedOverrides();
+  const playoffGameResults = await listPlayoffGameResults();
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -246,7 +249,8 @@ export default async function AdminPage({
             All current playoff-qualified player emails
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Includes teams with at least 1 win, no more than 1 forfeit, and inside the current 18-team playoff field.
+            Includes teams with at least 1 win, at least 3 games played, no more than 1 forfeit,
+            and inside the current 18-team playoff field.
           </p>
           <div className="mt-5 rounded-2xl bg-white/80 p-4">
             <p className="break-all text-sm text-foreground">
@@ -301,150 +305,140 @@ export default async function AdminPage({
             <div>
               <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Playoffs</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
-                Review the auto field or set a manual playoff bracket.
+                Review the field, edit seeds, and lock winners round by round.
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                The live `/app` bracket uses manual seeds when they are saved here. Otherwise it falls back
-                to the automatic qualification rule.
+                This bracket is always live on the admin side. Any winner you save here updates the
+                player `/app` bracket as well.
               </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <form action="/admin" method="get">
-                <input name="showSeeds" type="hidden" value="1" />
-                <button
-                  className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
-                  type="submit"
-                >
-                  Generate Playoff Seeding
-                </button>
-              </form>
-              {params.showSeeds ? (
-                <Link
-                  className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
-                  href="/admin"
-                >
-                  Hide seeding
-                </Link>
-              ) : null}
             </div>
           </div>
 
-          {params.showSeeds ? (
-            playoffSeeds.length > 0 ? (
-              <div className="mt-5 space-y-5">
-                <div className="overflow-x-auto rounded-2xl bg-white/80">
-                  <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                    <thead>
-                      <tr className="text-primary/70">
-                        <th className="px-4 py-3 font-semibold">Auto Seed</th>
-                        <th className="px-4 py-3 font-semibold">Team</th>
-                        <th className="px-4 py-3 font-semibold">Slot</th>
-                        <th className="px-4 py-3 font-semibold">W</th>
-                        <th className="px-4 py-3 font-semibold">L</th>
-                        <th className="px-4 py-3 font-semibold">F</th>
-                        <th className="px-4 py-3 font-semibold">Pct</th>
+          {params.playoffMessage ? (
+            <div
+              className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
+                params.playoffTone === "error"
+                  ? "border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] text-foreground"
+                  : "border border-[rgba(32,116,74,0.2)] bg-[rgba(32,116,74,0.08)] text-foreground"
+              }`}
+            >
+              {params.playoffMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-5">
+            <LiveBracket
+              mode="admin"
+              qualifiedSeeds={playoffField}
+              results={playoffGameResults.map((result) => ({
+                matchupId: result.matchup_id,
+                winnerTeamId: result.winner_team_id
+              }))}
+              saveResultAction={savePlayoffGameResultAction}
+            />
+          </div>
+
+          {playoffSeeds.length > 0 ? (
+            <div className="mt-5 space-y-5">
+              <div className="overflow-x-auto rounded-2xl bg-white/80">
+                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                  <thead>
+                    <tr className="text-primary/70">
+                      <th className="px-4 py-3 font-semibold">Auto Seed</th>
+                      <th className="px-4 py-3 font-semibold">Team</th>
+                      <th className="px-4 py-3 font-semibold">Slot</th>
+                      <th className="px-4 py-3 font-semibold">W</th>
+                      <th className="px-4 py-3 font-semibold">L</th>
+                      <th className="px-4 py-3 font-semibold">F</th>
+                      <th className="px-4 py-3 font-semibold">Pct</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playoffSeeds.map((row) => (
+                      <tr className="border-t border-border/60" key={row.teamId}>
+                        <td className="px-4 py-3 font-semibold text-foreground">{row.seed}</td>
+                        <td className="px-4 py-3 text-foreground">{row.teamName}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.slotLabel}</td>
+                        <td className="px-4 py-3 text-foreground">{row.wins}</td>
+                        <td className="px-4 py-3 text-foreground">{row.losses}</td>
+                        <td className="px-4 py-3 text-foreground">{row.forfeits}</td>
+                        <td className="px-4 py-3 text-foreground">{row.percentage.toFixed(3)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {playoffSeeds.map((row) => (
-                        <tr className="border-t border-border/60" key={row.teamId}>
-                          <td className="px-4 py-3 font-semibold text-foreground">{row.seed}</td>
-                          <td className="px-4 py-3 text-foreground">{row.teamName}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{row.slotLabel}</td>
-                          <td className="px-4 py-3 text-foreground">{row.wins}</td>
-                          <td className="px-4 py-3 text-foreground">{row.losses}</td>
-                          <td className="px-4 py-3 text-foreground">{row.forfeits}</td>
-                          <td className="px-4 py-3 text-foreground">{row.percentage.toFixed(3)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                <div className="rounded-2xl bg-white/80 p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
-                        Manual playoff editor
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-foreground">
-                        {playoffSeedOverrides.length > 0 ? "Manual bracket is active" : "Automatic bracket is active"}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Assign teams to Seeds 1 through 18 to override the live bracket. Leave all fields blank
-                        to return to automatic qualification.
-                      </p>
-                    </div>
-                    <div className="flex gap-3">
-                      <form action={clearPlayoffSeedsAction}>
-                        <button
-                          className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-foreground transition hover:bg-secondary/70"
-                          type="submit"
-                        >
-                          Clear manual seeds
-                        </button>
-                      </form>
-                    </div>
+              <div className="rounded-2xl bg-white/80 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.16em] text-primary/65">
+                      Manual playoff editor
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">
+                      {playoffSeedOverrides.length > 0 ? "Manual bracket is active" : "Automatic bracket is active"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Assign teams to Seeds 1 through 18 to override the live bracket. Leave all
+                      fields blank to return to automatic qualification.
+                    </p>
                   </div>
-
-                  {params.playoffMessage ? (
-                    <div
-                      className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
-                        params.playoffTone === "error"
-                          ? "border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] text-foreground"
-                          : "border border-[rgba(32,116,74,0.2)] bg-[rgba(32,116,74,0.08)] text-foreground"
-                      }`}
+                  <form action={clearPlayoffSeedsAction}>
+                    <button
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-foreground transition hover:bg-secondary/70"
+                      type="submit"
                     >
-                      {params.playoffMessage}
-                    </div>
-                  ) : null}
-
-                  <form action={savePlayoffSeedsAction} className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {Array.from({ length: 18 }, (_, index) => {
-                      const seed = index + 1;
-                      const selectedTeamId =
-                        playoffSeedOverrides.find((override) => override.seed === seed)?.team_id ??
-                        playoffField.find((entry) => entry.seed === seed)?.teamId ??
-                        "";
-
-                      return (
-                        <label className="grid gap-2" key={seed}>
-                          <span className="text-sm font-semibold text-foreground">Seed {seed}</span>
-                          <select
-                            className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
-                            defaultValue={selectedTeamId}
-                            name={`seed-${seed}`}
-                          >
-                            <option value="">No team</option>
-                            {teams
-                              .filter((team) => !team.is_waitlist)
-                              .sort((left, right) => left.team_name.localeCompare(right.team_name))
-                              .map((team) => (
-                                <option key={team.id} value={team.id}>
-                                  {team.team_name}
-                                  {team.active_day_label && team.active_time_label
-                                    ? ` (${team.active_day_label} • ${team.active_time_label})`
-                                    : ""}
-                                </option>
-                              ))}
-                          </select>
-                        </label>
-                      );
-                    })}
-
-                    <div className="md:col-span-2 xl:col-span-3">
-                      <button
-                        className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
-                        type="submit"
-                      >
-                        Save manual bracket
-                      </button>
-                    </div>
+                      Clear manual seeds
+                    </button>
                   </form>
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl bg-white/80">
-                  <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                <form action={savePlayoffSeedsAction} className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 18 }, (_, index) => {
+                    const seed = index + 1;
+                    const selectedTeamId =
+                      playoffSeedOverrides.find((override) => override.seed === seed)?.team_id ??
+                      playoffField.find((entry) => entry.seed === seed)?.teamId ??
+                      "";
+
+                    return (
+                      <label className="grid gap-2" key={seed}>
+                        <span className="text-sm font-semibold text-foreground">Seed {seed}</span>
+                        <select
+                          className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                          defaultValue={selectedTeamId}
+                          name={`seed-${seed}`}
+                        >
+                          <option value="">No team</option>
+                          {teams
+                            .filter((team) => !team.is_waitlist)
+                            .sort((left, right) => left.team_name.localeCompare(right.team_name))
+                            .map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.team_name}
+                                {team.active_day_label && team.active_time_label
+                                  ? ` (${team.active_day_label} • ${team.active_time_label})`
+                                  : ""}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    );
+                  })}
+
+                  <div className="md:col-span-2 xl:col-span-3">
+                    <button
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                      type="submit"
+                    >
+                      Save manual bracket
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl bg-white/80">
+                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
                   <thead>
                     <tr className="text-primary/70">
                       <th className="px-4 py-3 font-semibold">Seed</th>
@@ -471,13 +465,12 @@ export default async function AdminPage({
                   </tbody>
                 </table>
               </div>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
-                No standings data is available yet, so playoff seeding could not be generated.
-              </div>
-            )
-          ) : null}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground">
+              No standings data is available yet, so playoff seeding could not be generated.
+            </div>
+          )}
         </Card>
 
         <Card className="p-6">

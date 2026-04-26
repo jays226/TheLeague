@@ -16,10 +16,15 @@ import {
   getTeamById,
   getAdminSession,
   isAdminLoginRateLimited,
+  listLeagueGames,
+  listPlayoffGameResults,
+  listPlayoffSeedOverrides,
+  listTeamsWithReservations,
   moveTeamReservation,
   purgeExpiredAdminSessions,
   recordAdminLoginFailure,
   rejectReservation,
+  savePlayoffGameResult,
   savePlayoffSeedOverrides,
   saveLeagueGameResult,
   setTeamWaitlistStatus,
@@ -27,6 +32,7 @@ import {
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
 import { env } from "@/lib/env";
+import { buildPlayoffBracket, generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import {
   adminCookieName,
   adminSessionLifetimeSeconds,
@@ -287,7 +293,7 @@ export async function savePlayoffSeedsAction(formData: FormData) {
     }
 
     if (seenTeamIds.has(teamId)) {
-      redirect("/admin?showSeeds=1&playoffTone=error&playoffMessage=Each%20playoff%20team%20can%20only%20appear%20once.");
+      redirect("/admin?playoffTone=error&playoffMessage=Each%20playoff%20team%20can%20only%20appear%20once.");
     }
 
     seenTeamIds.add(teamId);
@@ -299,7 +305,7 @@ export async function savePlayoffSeedsAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
-  redirect("/admin?showSeeds=1&playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20saved.");
+  redirect("/admin?playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20saved.");
 }
 
 export async function clearPlayoffSeedsAction() {
@@ -308,5 +314,74 @@ export async function clearPlayoffSeedsAction() {
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
-  redirect("/admin?showSeeds=1&playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20cleared.");
+  redirect("/admin?playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20cleared.");
+}
+
+export async function savePlayoffGameResultAction(formData: FormData) {
+  await requireAdmin();
+
+  const matchupId = String(formData.get("matchupId") || "").trim();
+  const winnerTeamId = String(formData.get("winnerTeamId") || "").trim() || null;
+  const teams = await listTeamsWithReservations();
+  const leagueGames = await listLeagueGames();
+  const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
+  const playoffSeedOverrides = await listPlayoffSeedOverrides();
+  const playoffGameResults = await listPlayoffGameResults();
+  const playoffField = resolvePlayoffField({
+    autoSeeds: playoffSeeds,
+    overrides: playoffSeedOverrides.map((override) => ({
+      seed: override.seed,
+      teamId: override.team_id
+    })),
+    teamContextById: new Map(
+      teams.map((team) => [
+        team.id,
+        {
+          teamId: team.id,
+          teamName: team.team_name,
+          slotId: team.active_slot_id,
+          slotLabel:
+            team.active_day_label && team.active_time_label
+              ? `${team.active_day_label} • ${team.active_time_label}`
+              : "No slot assigned"
+        }
+      ])
+    )
+  });
+  const bracket = buildPlayoffBracket({
+    qualifiedSeeds: playoffField,
+    results: playoffGameResults.map((result) => ({
+      matchupId: result.matchup_id,
+      winnerTeamId: result.winner_team_id
+    }))
+  });
+  const allMatchups = [
+    ...bracket.playInMatchups,
+    ...bracket.roundOf16Matchups,
+    ...bracket.quarterfinalMatchups,
+    ...bracket.semifinalMatchups,
+    ...bracket.finalMatchups
+  ];
+  const matchup = allMatchups.find((entry) => entry.id === matchupId);
+
+  if (!matchup) {
+    throw new Error("Unknown playoff matchup.");
+  }
+
+  const validTeamIds = [matchup.top, matchup.bottom]
+    .filter((entry): entry is typeof entry & { teamId: string } => "teamId" in entry)
+    .map((entry) => entry.teamId);
+
+  if (winnerTeamId && !validTeamIds.includes(winnerTeamId)) {
+    throw new Error("Winner must be one of the teams currently shown in that playoff matchup.");
+  }
+
+  await savePlayoffGameResult({
+    matchupId: matchup.id,
+    winnerTeamId
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/app");
+  revalidatePath("/app/dashboard");
 }

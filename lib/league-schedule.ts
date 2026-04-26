@@ -79,6 +79,65 @@ export type PlayoffTeamContext = {
   slotLabel?: string | null;
 };
 
+export type PlayoffBracketMatchId =
+  | "play-in-1"
+  | "play-in-2"
+  | "r16-a"
+  | "r16-b"
+  | "r16-c"
+  | "r16-d"
+  | "r16-e"
+  | "r16-f"
+  | "r16-g"
+  | "r16-h"
+  | "qf-1"
+  | "qf-2"
+  | "qf-3"
+  | "qf-4"
+  | "sf-1"
+  | "sf-2"
+  | "final";
+
+export type PlayoffBracketResultInput = {
+  matchupId: PlayoffBracketMatchId;
+  winnerTeamId: string;
+};
+
+export type PlayoffBracketPlaceholder = {
+  label: string;
+  detail?: string;
+};
+
+export type PlayoffBracketEntry = QualifiedPlayoffSeedRow | PlayoffBracketPlaceholder;
+
+export type PlayoffBracketMatchup = {
+  id: PlayoffBracketMatchId;
+  label: string;
+  top: PlayoffBracketEntry;
+  bottom: PlayoffBracketEntry;
+  winner: PlayoffBracketEntry | null;
+  winnerTeamId: string | null;
+  canPickWinner: boolean;
+};
+
+type BracketSource =
+  | {
+      type: "seed";
+      seed: number;
+    }
+  | {
+      type: "winner";
+      matchupId: PlayoffBracketMatchId;
+      label: string;
+    };
+
+type BracketDefinition = {
+  id: PlayoffBracketMatchId;
+  label: string;
+  top: BracketSource;
+  bottom: BracketSource;
+};
+
 const seasonDatesByDay = {
   monday: ["2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20"],
   tuesday: ["2026-03-31", "2026-04-07", "2026-04-14", "2026-04-21"],
@@ -157,6 +216,253 @@ function formatSeasonDate(value: string) {
     day: "numeric",
     timeZone: "UTC"
   }).format(date);
+}
+
+function createSeedPlaceholder(seed: number): PlayoffBracketPlaceholder {
+  return {
+    label: `Seed ${seed}`,
+    detail: "Projected"
+  };
+}
+
+function resolveBracketSource(input: {
+  source: BracketSource;
+  seedsByNumber: Map<number, QualifiedPlayoffSeedRow>;
+  winnersByMatchId: Map<PlayoffBracketMatchId, QualifiedPlayoffSeedRow>;
+}) {
+  if (input.source.type === "seed") {
+    return input.seedsByNumber.get(input.source.seed) ?? createSeedPlaceholder(input.source.seed);
+  }
+
+  return (
+    input.winnersByMatchId.get(input.source.matchupId) ?? {
+      label: input.source.label,
+      detail: "Awaiting result"
+    }
+  );
+}
+
+function createBracketDefinitions(hasPlayIns: boolean) {
+  const playInDefinitions: BracketDefinition[] = hasPlayIns
+    ? [
+        {
+          id: "play-in-1",
+          label: "Play-in 1",
+          top: { type: "seed", seed: 15 },
+          bottom: { type: "seed", seed: 18 }
+        },
+        {
+          id: "play-in-2",
+          label: "Play-in 2",
+          top: { type: "seed", seed: 16 },
+          bottom: { type: "seed", seed: 17 }
+        }
+      ]
+    : [];
+
+  const roundOf16Definitions: BracketDefinition[] = hasPlayIns
+    ? [
+        {
+          id: "r16-a",
+          label: "A",
+          top: { type: "seed", seed: 1 },
+          bottom: { type: "winner", matchupId: "play-in-2", label: "Winner of Play-in 2" }
+        },
+        {
+          id: "r16-b",
+          label: "B",
+          top: { type: "seed", seed: 8 },
+          bottom: { type: "seed", seed: 9 }
+        },
+        {
+          id: "r16-c",
+          label: "C",
+          top: { type: "seed", seed: 5 },
+          bottom: { type: "seed", seed: 12 }
+        },
+        {
+          id: "r16-d",
+          label: "D",
+          top: { type: "seed", seed: 4 },
+          bottom: { type: "seed", seed: 13 }
+        },
+        {
+          id: "r16-e",
+          label: "E",
+          top: { type: "seed", seed: 3 },
+          bottom: { type: "seed", seed: 14 }
+        },
+        {
+          id: "r16-f",
+          label: "F",
+          top: { type: "seed", seed: 6 },
+          bottom: { type: "seed", seed: 11 }
+        },
+        {
+          id: "r16-g",
+          label: "G",
+          top: { type: "seed", seed: 2 },
+          bottom: { type: "winner", matchupId: "play-in-1", label: "Winner of Play-in 1" }
+        },
+        {
+          id: "r16-h",
+          label: "H",
+          top: { type: "seed", seed: 7 },
+          bottom: { type: "seed", seed: 10 }
+        }
+      ]
+    : [
+        {
+          id: "r16-a",
+          label: "A",
+          top: { type: "seed", seed: 1 },
+          bottom: { type: "seed", seed: 16 }
+        },
+        {
+          id: "r16-b",
+          label: "B",
+          top: { type: "seed", seed: 8 },
+          bottom: { type: "seed", seed: 9 }
+        },
+        {
+          id: "r16-c",
+          label: "C",
+          top: { type: "seed", seed: 5 },
+          bottom: { type: "seed", seed: 12 }
+        },
+        {
+          id: "r16-d",
+          label: "D",
+          top: { type: "seed", seed: 4 },
+          bottom: { type: "seed", seed: 13 }
+        },
+        {
+          id: "r16-e",
+          label: "E",
+          top: { type: "seed", seed: 3 },
+          bottom: { type: "seed", seed: 14 }
+        },
+        {
+          id: "r16-f",
+          label: "F",
+          top: { type: "seed", seed: 6 },
+          bottom: { type: "seed", seed: 11 }
+        },
+        {
+          id: "r16-g",
+          label: "G",
+          top: { type: "seed", seed: 2 },
+          bottom: { type: "seed", seed: 15 }
+        },
+        {
+          id: "r16-h",
+          label: "H",
+          top: { type: "seed", seed: 7 },
+          bottom: { type: "seed", seed: 10 }
+        }
+      ];
+
+  const quarterfinalDefinitions: BracketDefinition[] = [
+    {
+      id: "qf-1",
+      label: "QF1",
+      top: { type: "winner", matchupId: "r16-a", label: "Winner of A" },
+      bottom: { type: "winner", matchupId: "r16-b", label: "Winner of B" }
+    },
+    {
+      id: "qf-2",
+      label: "QF2",
+      top: { type: "winner", matchupId: "r16-c", label: "Winner of C" },
+      bottom: { type: "winner", matchupId: "r16-d", label: "Winner of D" }
+    },
+    {
+      id: "qf-3",
+      label: "QF3",
+      top: { type: "winner", matchupId: "r16-e", label: "Winner of E" },
+      bottom: { type: "winner", matchupId: "r16-f", label: "Winner of F" }
+    },
+    {
+      id: "qf-4",
+      label: "QF4",
+      top: { type: "winner", matchupId: "r16-g", label: "Winner of G" },
+      bottom: { type: "winner", matchupId: "r16-h", label: "Winner of H" }
+    }
+  ];
+
+  const semifinalDefinitions: BracketDefinition[] = [
+    {
+      id: "sf-1",
+      label: "SF1",
+      top: { type: "winner", matchupId: "qf-1", label: "Winner of QF1" },
+      bottom: { type: "winner", matchupId: "qf-2", label: "Winner of QF2" }
+    },
+    {
+      id: "sf-2",
+      label: "SF2",
+      top: { type: "winner", matchupId: "qf-3", label: "Winner of QF3" },
+      bottom: { type: "winner", matchupId: "qf-4", label: "Winner of QF4" }
+    }
+  ];
+
+  const finalDefinitions: BracketDefinition[] = [
+    {
+      id: "final",
+      label: "Final",
+      top: { type: "winner", matchupId: "sf-1", label: "Winner of SF1" },
+      bottom: { type: "winner", matchupId: "sf-2", label: "Winner of SF2" }
+    }
+  ];
+
+  return {
+    playInDefinitions,
+    roundOf16Definitions,
+    quarterfinalDefinitions,
+    semifinalDefinitions,
+    finalDefinitions
+  };
+}
+
+function resolveBracketMatchups(input: {
+  definitions: BracketDefinition[];
+  seedsByNumber: Map<number, QualifiedPlayoffSeedRow>;
+  resultByMatchId: Map<PlayoffBracketMatchId, string>;
+  winnersByMatchId: Map<PlayoffBracketMatchId, QualifiedPlayoffSeedRow>;
+}) {
+  return input.definitions.map((definition) => {
+    const top = resolveBracketSource({
+      source: definition.top,
+      seedsByNumber: input.seedsByNumber,
+      winnersByMatchId: input.winnersByMatchId
+    });
+    const bottom = resolveBracketSource({
+      source: definition.bottom,
+      seedsByNumber: input.seedsByNumber,
+      winnersByMatchId: input.winnersByMatchId
+    });
+    const topTeamId = "teamId" in top ? top.teamId : null;
+    const bottomTeamId = "teamId" in bottom ? bottom.teamId : null;
+    const winnerTeamId = input.resultByMatchId.get(definition.id) ?? null;
+    const winner =
+      winnerTeamId && topTeamId === winnerTeamId
+        ? top
+        : winnerTeamId && bottomTeamId === winnerTeamId
+          ? bottom
+          : null;
+
+    if (winner && "teamId" in winner) {
+      input.winnersByMatchId.set(definition.id, winner);
+    }
+
+    return {
+      id: definition.id,
+      label: definition.label,
+      top,
+      bottom,
+      winner,
+      winnerTeamId,
+      canPickWinner: Boolean(topTeamId && bottomTeamId)
+    } satisfies PlayoffBracketMatchup;
+  });
 }
 
 function sortTeamsForSlot(slotId: string, teams: SlotTeam[]) {
@@ -460,16 +766,23 @@ export function qualifyPlayoffSeeds(
   seeds: PlayoffSeedRow[],
   input?: {
     minimumWins?: number;
+    minimumGames?: number;
     maximumForfeits?: number;
     maxTeams?: number;
   }
 ) {
   const minimumWins = input?.minimumWins ?? 1;
+  const minimumGames = input?.minimumGames ?? 3;
   const maximumForfeits = input?.maximumForfeits ?? 1;
   const maxTeams = input?.maxTeams ?? 18;
 
   return seeds
-    .filter((seed) => seed.wins >= minimumWins && seed.forfeits <= maximumForfeits)
+    .filter(
+      (seed) =>
+        seed.wins >= minimumWins &&
+        seed.wins + seed.losses >= minimumGames &&
+        seed.forfeits <= maximumForfeits
+    )
     .slice(0, maxTeams)
     .map((seed, index) => ({
       ...seed,
@@ -512,4 +825,58 @@ export function resolvePlayoffField(input: {
       percentage: autoSeed?.percentage ?? 0
     } satisfies QualifiedPlayoffSeedRow;
   });
+}
+
+export function buildPlayoffBracket(input: {
+  qualifiedSeeds: QualifiedPlayoffSeedRow[];
+  results?: PlayoffBracketResultInput[];
+}) {
+  const field = input.qualifiedSeeds.slice(0, 18);
+  const hasPlayIns = field.length >= 18;
+  const seedsByNumber = new Map(field.map((seed) => [seed.seed, seed]));
+  const resultByMatchId = new Map(
+    (input.results ?? []).map((result) => [result.matchupId, result.winnerTeamId])
+  );
+  const winnersByMatchId = new Map<PlayoffBracketMatchId, QualifiedPlayoffSeedRow>();
+  const definitions = createBracketDefinitions(hasPlayIns);
+  const playInMatchups = resolveBracketMatchups({
+    definitions: definitions.playInDefinitions,
+    seedsByNumber,
+    resultByMatchId,
+    winnersByMatchId
+  });
+  const roundOf16Matchups = resolveBracketMatchups({
+    definitions: definitions.roundOf16Definitions,
+    seedsByNumber,
+    resultByMatchId,
+    winnersByMatchId
+  });
+  const quarterfinalMatchups = resolveBracketMatchups({
+    definitions: definitions.quarterfinalDefinitions,
+    seedsByNumber,
+    resultByMatchId,
+    winnersByMatchId
+  });
+  const semifinalMatchups = resolveBracketMatchups({
+    definitions: definitions.semifinalDefinitions,
+    seedsByNumber,
+    resultByMatchId,
+    winnersByMatchId
+  });
+  const finalMatchups = resolveBracketMatchups({
+    definitions: definitions.finalDefinitions,
+    seedsByNumber,
+    resultByMatchId,
+    winnersByMatchId
+  });
+
+  return {
+    field,
+    currentChampion: finalMatchups[0]?.winner ?? null,
+    playInMatchups,
+    roundOf16Matchups,
+    quarterfinalMatchups,
+    semifinalMatchups,
+    finalMatchups
+  };
 }
