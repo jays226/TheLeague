@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { logoutTeamAction } from "@/app/app/actions";
+import { LiveBracket } from "@/components/dashboard/live-bracket";
 import { ReservationBanner } from "@/components/dashboard/reservation-banner";
 import { ScoreReportPanel } from "@/components/dashboard/score-report-panel";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +15,12 @@ import {
   getTeamByAccessToken,
   listLeagueGamesForTeam,
   listLeagueStandings,
+  listPlayoffSeedOverrides,
+  listTeamsWithReservations,
   listSlots
 } from "@/lib/db";
 import { getLeagueGameWindow } from "@/lib/eastern-time";
+import { generatePlayoffSeeds, resolvePlayoffField } from "@/lib/league-schedule";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 
@@ -63,6 +67,30 @@ export default async function AppPage({
   const activeSlot = activeReservation ? slots.find((slot) => slot.id === activeReservation.slot_id) : undefined;
   const teamSchedule = await listLeagueGamesForTeam(team.id);
   const standings = await listLeagueStandings();
+  const playoffSeeds = generatePlayoffSeeds(standings);
+  const playoffSeedOverrides = await listPlayoffSeedOverrides();
+  const teams = await listTeamsWithReservations();
+  const qualifiedPlayoffSeeds = resolvePlayoffField({
+    autoSeeds: playoffSeeds,
+    overrides: playoffSeedOverrides.map((override) => ({
+      seed: override.seed,
+      teamId: override.team_id
+    })),
+    teamContextById: new Map(
+      teams.map((entry) => [
+        entry.id,
+        {
+          teamId: entry.id,
+          teamName: entry.team_name,
+          slotId: entry.active_slot_id,
+          slotLabel:
+            entry.active_day_label && entry.active_time_label
+              ? `${entry.active_day_label} • ${entry.active_time_label}`
+              : "No slot assigned"
+        }
+      ])
+    )
+  });
   const currentSlotStandings = activeReservation
     ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
     : undefined;
@@ -115,13 +143,13 @@ export default async function AppPage({
               />
             </div>
             <div>
-              <Badge>Schedule</Badge>
+              <Badge>Live bracket</Badge>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-foreground">
                 {team.team_name}
               </h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-                This is now your main portal page: see your weekly matchups, your current slot, and
-                standings across every time slot in one place.
+                This is now your main portal page: check the live playoff picture first, then scroll
+                for your weekly matchup, slot details, and standings.
               </p>
               <Link
                 className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-[#E1306C] px-4 text-sm font-semibold text-white transition hover:bg-[#c72b5f]"
@@ -200,6 +228,10 @@ export default async function AppPage({
           </Card>
         ) : (
           <>
+            <Card className="p-6">
+              <LiveBracket currentTeamId={team.id} qualifiedSeeds={qualifiedPlayoffSeeds} />
+            </Card>
+
             <Card className="p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>

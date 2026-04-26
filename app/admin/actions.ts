@@ -20,6 +20,7 @@ import {
   purgeExpiredAdminSessions,
   recordAdminLoginFailure,
   rejectReservation,
+  savePlayoffSeedOverrides,
   saveLeagueGameResult,
   setTeamWaitlistStatus,
   updateTeamByAdmin
@@ -270,4 +271,40 @@ export async function saveGameResultAction(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
   revalidatePath("/schedule");
+}
+
+export async function savePlayoffSeedsAction(formData: FormData) {
+  await requireAdmin();
+
+  const overrides: Array<{ seed: number; teamId: string }> = [];
+  const seenTeamIds = new Set<string>();
+
+  for (let seed = 1; seed <= 18; seed += 1) {
+    const teamId = String(formData.get(`seed-${seed}`) || "").trim();
+
+    if (!teamId) {
+      continue;
+    }
+
+    if (seenTeamIds.has(teamId)) {
+      throw new Error("Each playoff team can only appear once.");
+    }
+
+    seenTeamIds.add(teamId);
+    overrides.push({ seed, teamId });
+  }
+
+  await savePlayoffSeedOverrides(overrides);
+
+  revalidatePath("/admin");
+  revalidatePath("/app");
+  revalidatePath("/app/dashboard");
+}
+
+export async function clearPlayoffSeedsAction() {
+  await requireAdmin();
+  await savePlayoffSeedOverrides([]);
+  revalidatePath("/admin");
+  revalidatePath("/app");
+  revalidatePath("/app/dashboard");
 }

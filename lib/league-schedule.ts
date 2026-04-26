@@ -52,6 +52,22 @@ export type PlayoffSeedRow = {
   percentage: number;
 };
 
+export type QualifiedPlayoffSeedRow = PlayoffSeedRow & {
+  overallSeed: number;
+};
+
+export type PlayoffSeedOverrideInput = {
+  seed: number;
+  teamId: string;
+};
+
+export type PlayoffTeamContext = {
+  teamId: string;
+  teamName: string;
+  slotId?: string | null;
+  slotLabel?: string | null;
+};
+
 const seasonDatesByDay = {
   monday: ["2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20"],
   tuesday: ["2026-03-31", "2026-04-07", "2026-04-14", "2026-04-21"],
@@ -353,4 +369,62 @@ export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
       ...row,
       seed: index + 1
     })) satisfies PlayoffSeedRow[];
+}
+
+export function qualifyPlayoffSeeds(
+  seeds: PlayoffSeedRow[],
+  input?: {
+    minimumWins?: number;
+    maximumForfeits?: number;
+    maxTeams?: number;
+  }
+) {
+  const minimumWins = input?.minimumWins ?? 1;
+  const maximumForfeits = input?.maximumForfeits ?? 1;
+  const maxTeams = input?.maxTeams ?? 18;
+
+  return seeds
+    .filter((seed) => seed.wins >= minimumWins && seed.forfeits <= maximumForfeits)
+    .slice(0, maxTeams)
+    .map((seed, index) => ({
+      ...seed,
+      overallSeed: seed.seed,
+      seed: index + 1
+    })) satisfies QualifiedPlayoffSeedRow[];
+}
+
+export function resolvePlayoffField(input: {
+  autoSeeds: PlayoffSeedRow[];
+  overrides: PlayoffSeedOverrideInput[];
+  teamContextById?: Map<string, PlayoffTeamContext>;
+  maxTeams?: number;
+}) {
+  const maxTeams = input.maxTeams ?? 18;
+  const manualOverrides = [...input.overrides]
+    .sort((left, right) => left.seed - right.seed)
+    .slice(0, maxTeams);
+
+  if (manualOverrides.length === 0) {
+    return qualifyPlayoffSeeds(input.autoSeeds, { maxTeams });
+  }
+
+  const autoSeedByTeamId = new Map(input.autoSeeds.map((seed) => [seed.teamId, seed]));
+
+  return manualOverrides.map((override, index) => {
+    const autoSeed = autoSeedByTeamId.get(override.teamId);
+    const teamContext = input.teamContextById?.get(override.teamId);
+
+    return {
+      seed: index + 1,
+      overallSeed: autoSeed?.seed ?? 0,
+      teamId: override.teamId,
+      teamName: autoSeed?.teamName ?? teamContext?.teamName ?? "Unknown team",
+      slotId: autoSeed?.slotId ?? teamContext?.slotId ?? "",
+      slotLabel: autoSeed?.slotLabel ?? teamContext?.slotLabel ?? "No slot assigned",
+      wins: autoSeed?.wins ?? 0,
+      losses: autoSeed?.losses ?? 0,
+      forfeits: autoSeed?.forfeits ?? 0,
+      percentage: autoSeed?.percentage ?? 0
+    } satisfies QualifiedPlayoffSeedRow;
+  });
 }

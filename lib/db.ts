@@ -318,6 +318,20 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS playoff_seed_overrides (
+          seed integer PRIMARY KEY,
+          team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_playoff_seed_overrides_team_id
+        ON playoff_seed_overrides (team_id)
+      `);
+
+      await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_email_list_signups_email_unique
         ON email_list_signups (lower(email))
       `);
@@ -498,6 +512,13 @@ export type AdminTeamRow = TeamRecord & {
   active_day_label: string | null;
   active_time_label: string | null;
   active_reservation_status: ReservationRecord["status"] | null;
+};
+
+export type PlayoffSeedOverrideRecord = {
+  seed: number;
+  team_id: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type PasswordResetTokenRecord = {
@@ -722,6 +743,32 @@ export async function listTeamsWithReservations() {
       active_time_label: slot?.timeLabel ?? null,
       active_reservation_status: reservation?.status ?? null
     } satisfies AdminTeamRow;
+  });
+}
+
+export async function listPlayoffSeedOverrides() {
+  return query<PlayoffSeedOverrideRecord>(
+    `
+      SELECT seed, team_id, created_at, updated_at
+      FROM playoff_seed_overrides
+      ORDER BY seed ASC
+    `
+  );
+}
+
+export async function savePlayoffSeedOverrides(overrides: Array<{ seed: number; teamId: string }>) {
+  await withTransaction(async (client) => {
+    await client.query("DELETE FROM playoff_seed_overrides");
+
+    for (const override of overrides) {
+      await client.query(
+        `
+          INSERT INTO playoff_seed_overrides (seed, team_id, created_at, updated_at)
+          VALUES ($1, $2, now(), now())
+        `,
+        [override.seed, override.teamId]
+      );
+    }
   });
 }
 
