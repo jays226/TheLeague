@@ -357,11 +357,15 @@ function comparePlayoffSeedRows(
     competitiveWins: 0,
     forfeitWins: 0
   };
+  const leftHasForfeit = left.forfeits > 0 ? 1 : 0;
+  const rightHasForfeit = right.forfeits > 0 ? 1 : 0;
 
   return (
     right.percentage - left.percentage ||
+    leftHasForfeit - rightHasForfeit ||
     rightMetrics.dominantWins - leftMetrics.dominantWins ||
     rightMetrics.competitiveWins - leftMetrics.competitiveWins ||
+    left.forfeits - right.forfeits ||
     leftMetrics.forfeitWins - rightMetrics.forfeitWins ||
     left.teamName.localeCompare(right.teamName, undefined, { sensitivity: "accent" }) ||
     left.slotLabel.localeCompare(right.slotLabel, undefined, { sensitivity: "accent" }) ||
