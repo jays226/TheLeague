@@ -287,7 +287,7 @@ export async function savePlayoffSeedsAction(formData: FormData) {
     }
 
     if (seenTeamIds.has(teamId)) {
-      throw new Error("Each playoff team can only appear once.");
+      redirect("/admin?showSeeds=1&playoffTone=error&playoffMessage=Each%20playoff%20team%20can%20only%20appear%20once.");
     }
 
     seenTeamIds.add(teamId);
@@ -299,6 +299,7 @@ export async function savePlayoffSeedsAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
+  redirect("/admin?showSeeds=1&playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20saved.");
 }
 
 export async function clearPlayoffSeedsAction() {
@@ -307,4 +308,5 @@ export async function clearPlayoffSeedsAction() {
   revalidatePath("/admin");
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
+  redirect("/admin?showSeeds=1&playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20cleared.");
 }

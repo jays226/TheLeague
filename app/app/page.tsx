@@ -13,6 +13,7 @@ import {
   getActiveReservationForTeam,
   getTeamById,
   getTeamByAccessToken,
+  listLeagueGames,
   listLeagueGamesForTeam,
   listLeagueStandings,
   listPlayoffSeedOverrides,
@@ -20,7 +21,7 @@ import {
   listSlots
 } from "@/lib/db";
 import { getLeagueGameWindow } from "@/lib/eastern-time";
-import { generatePlayoffSeeds, resolvePlayoffField } from "@/lib/league-schedule";
+import { generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 
@@ -65,9 +66,10 @@ export default async function AppPage({
   const activeReservation = await getActiveReservationForTeam(team.id);
   const slots = await listSlots();
   const activeSlot = activeReservation ? slots.find((slot) => slot.id === activeReservation.slot_id) : undefined;
+  const leagueGames = await listLeagueGames();
   const teamSchedule = await listLeagueGamesForTeam(team.id);
   const standings = await listLeagueStandings();
-  const playoffSeeds = generatePlayoffSeeds(standings);
+  const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
   const playoffSeedOverrides = await listPlayoffSeedOverrides();
   const teams = await listTeamsWithReservations();
   const qualifiedPlayoffSeeds = resolvePlayoffField({

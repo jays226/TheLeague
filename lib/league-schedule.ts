@@ -25,6 +25,11 @@ export type LeagueGameWithResult = GeneratedLeagueGame & {
   forfeitingTeamId?: string | null;
 };
 
+export type PlayoffSeedingGame = LeagueGameWithResult & {
+  homeTeamWins?: number | null;
+  awayTeamWins?: number | null;
+};
+
 export type SlotStandingsRow = {
   teamId: string;
   teamName: string;
@@ -50,6 +55,12 @@ export type PlayoffSeedRow = {
   losses: number;
   forfeits: number;
   percentage: number;
+};
+
+type PlayoffSeedSortMetrics = {
+  dominantWins: number;
+  competitiveWins: number;
+  forfeitWins: number;
 };
 
 export type QualifiedPlayoffSeedRow = PlayoffSeedRow & {
@@ -331,6 +342,33 @@ function normalizePercentage(input: {
   return totalGames > 0 ? input.wins / totalGames : 0;
 }
 
+function comparePlayoffSeedRows(
+  left: PlayoffSeedRow,
+  right: PlayoffSeedRow,
+  metricsByTeamId?: Map<string, PlayoffSeedSortMetrics>
+) {
+  const leftMetrics = metricsByTeamId?.get(left.teamId) ?? {
+    dominantWins: 0,
+    competitiveWins: 0,
+    forfeitWins: 0
+  };
+  const rightMetrics = metricsByTeamId?.get(right.teamId) ?? {
+    dominantWins: 0,
+    competitiveWins: 0,
+    forfeitWins: 0
+  };
+
+  return (
+    right.percentage - left.percentage ||
+    rightMetrics.dominantWins - leftMetrics.dominantWins ||
+    rightMetrics.competitiveWins - leftMetrics.competitiveWins ||
+    leftMetrics.forfeitWins - rightMetrics.forfeitWins ||
+    left.teamName.localeCompare(right.teamName, undefined, { sensitivity: "accent" }) ||
+    left.slotLabel.localeCompare(right.slotLabel, undefined, { sensitivity: "accent" }) ||
+    left.teamId.localeCompare(right.teamId)
+  );
+}
+
 export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
   const rows = standingsBySlot.flatMap((slot) =>
     (slot?.teams ?? []).map((team) => {
@@ -357,14 +395,57 @@ export function generatePlayoffSeeds(standingsBySlot: SlotStandings[]) {
   );
 
   return rows
-    .sort(
-      (left, right) =>
-        right.percentage - left.percentage ||
-        right.wins - left.wins ||
-        left.teamName.localeCompare(right.teamName, undefined, { sensitivity: "accent" }) ||
-        left.slotLabel.localeCompare(right.slotLabel, undefined, { sensitivity: "accent" }) ||
-        left.teamId.localeCompare(right.teamId)
-    )
+    .sort((left, right) => comparePlayoffSeedRows(left, right))
+    .map((row, index) => ({
+      ...row,
+      seed: index + 1
+    })) satisfies PlayoffSeedRow[];
+}
+
+export function generatePlayoffSeedsFromGames(games: PlayoffSeedingGame[]) {
+  const standingsBySlot = buildStandingsFromGames(games);
+  const rows = generatePlayoffSeeds(standingsBySlot);
+  const metricsByTeamId = new Map<string, PlayoffSeedSortMetrics>();
+
+  for (const game of games) {
+    if (!game.winnerTeamId) {
+      continue;
+    }
+
+    const current = metricsByTeamId.get(game.winnerTeamId) ?? {
+      dominantWins: 0,
+      competitiveWins: 0,
+      forfeitWins: 0
+    };
+
+    if (game.resultType === "forfeit") {
+      current.forfeitWins += 1;
+      metricsByTeamId.set(game.winnerTeamId, current);
+      continue;
+    }
+
+    const winnerWins =
+      game.winnerTeamId === game.homeTeamId ? game.homeTeamWins ?? null : game.awayTeamWins ?? null;
+    const loserWins =
+      game.winnerTeamId === game.homeTeamId ? game.awayTeamWins ?? null : game.homeTeamWins ?? null;
+
+    if (winnerWins === null || loserWins === null) {
+      current.competitiveWins += 1;
+      metricsByTeamId.set(game.winnerTeamId, current);
+      continue;
+    }
+
+    if (winnerWins - loserWins >= 2) {
+      current.dominantWins += 1;
+    } else {
+      current.competitiveWins += 1;
+    }
+
+    metricsByTeamId.set(game.winnerTeamId, current);
+  }
+
+  return rows
+    .sort((left, right) => comparePlayoffSeedRows(left, right, metricsByTeamId))
     .map((row, index) => ({
       ...row,
       seed: index + 1

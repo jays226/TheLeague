@@ -22,7 +22,6 @@ import {
   getAdminSession,
   getReservationStats,
   listLeagueGames,
-  listLeagueStandings,
   listAllReservations,
   listPlayoffSeedOverrides,
   listSlots,
@@ -33,7 +32,7 @@ import {
 } from "@/lib/db";
 import { getEasternParts, getLeagueGameWindow } from "@/lib/eastern-time";
 import { env } from "@/lib/env";
-import { generatePlayoffSeeds, resolvePlayoffField } from "@/lib/league-schedule";
+import { generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
 
 function getCurrentEasternDateKey(now: Date) {
@@ -44,7 +43,12 @@ function getCurrentEasternDateKey(now: Date) {
 export default async function AdminPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; showSeeds?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    showSeeds?: string;
+    playoffMessage?: string;
+    playoffTone?: "success" | "error";
+  }>;
 }) {
   const params = await searchParams;
   const cookieStore = await cookies();
@@ -100,9 +104,8 @@ export default async function AdminPage({
   const slots = (await listSlots()) as SlotRecord[];
   const reservations = (await listAllReservations()) as ReservationRecord[];
   const stats = await getReservationStats();
-  const standingsBySlot = await listLeagueStandings();
   const leagueGames = await listLeagueGames();
-  const playoffSeeds = generatePlayoffSeeds(standingsBySlot);
+  const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
   const playoffSeedOverrides = await listPlayoffSeedOverrides();
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
@@ -383,6 +386,18 @@ export default async function AdminPage({
                       </form>
                     </div>
                   </div>
+
+                  {params.playoffMessage ? (
+                    <div
+                      className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
+                        params.playoffTone === "error"
+                          ? "border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] text-foreground"
+                          : "border border-[rgba(32,116,74,0.2)] bg-[rgba(32,116,74,0.08)] text-foreground"
+                      }`}
+                    >
+                      {params.playoffMessage}
+                    </div>
+                  ) : null}
 
                   <form action={savePlayoffSeedsAction} className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {Array.from({ length: 18 }, (_, index) => {
