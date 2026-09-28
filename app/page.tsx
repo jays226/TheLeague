@@ -68,9 +68,27 @@ export default async function HomePage() {
 
             <div className="flex flex-1 items-center justify-center py-10">
               <div className="landing-hero-card relative w-full max-w-4xl text-center">
-                <h1 className="mt-12 text-6xl font-semibold tracking-[-0.07em] text-foreground sm:mt-14 sm:text-7xl lg:text-[6.5rem]">
-                  The League
-                </h1>
+                <div className="mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:mt-14 sm:gap-x-4">
+                  <h1 className="whitespace-nowrap text-5xl font-semibold tracking-[-0.07em] text-foreground sm:text-6xl lg:text-[5.5rem]">
+                    The League
+                  </h1>
+                  <span aria-hidden="true" className="text-4xl font-light text-primary/55 sm:text-5xl">
+                    ×
+                  </span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Image
+                      alt="UVA Pickleball Club logo"
+                      className="h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]"
+                      height={1080}
+                      priority
+                      src="/uva-pickleball-club-logo.svg"
+                      width={1080}
+                    />
+                    <span className="whitespace-nowrap text-xl font-semibold tracking-[-0.04em] text-foreground sm:text-2xl lg:text-3xl">
+                      UVA Pickleball Club
+                    </span>
+                  </div>
+                </div>
                 <div className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
                   <span className="block text-center">
                     Fall 2026 • Social Team: {socialDiscountActive ? <><strong>$5/player</strong> through Oct 4; </> : <><strong>$15/player</strong>; </>}General Team: <strong>$15/player</strong>
