@@ -1,6 +1,11 @@
 export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  squareLink: process.env.NEXT_PUBLIC_SQUARE_LINK || "https://square.link/u/0MjJczgc",
+  socialSquareLink:
+    process.env.NEXT_PUBLIC_SOCIAL_SQUARE_LINK ||
+    process.env.NEXT_PUBLIC_SQUARE_LINK ||
+    "https://square.link/u/0MjJczgc",
+  nonSocialSquareLink:
+    process.env.NEXT_PUBLIC_NON_SOCIAL_SQUARE_LINK || "https://square.link/u/hkvqu0aA",
   databaseUrl: process.env.DATABASE_URL,
   emailVerificationApiKey: process.env.EMAIL_VERIFICATION_API_KEY,
   emailVerificationMode: process.env.EMAIL_VERIFICATION_MODE || "mock",

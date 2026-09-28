@@ -190,7 +190,7 @@ export default async function DashboardPage({
                   ? "You do not need to choose a slot right now. If room opens up, we will contact your team by email with next steps."
                   : team.payment_status === "approved"
                     ? "Your schedule now lives on the main portal page. Use the dashboard below to claim a slot or request a switch."
-                    : "Each player should use the Square link to pay their own fee. Your full name and Computing ID will be collected with your payment. Registration is confirmed after payments from both players are received."}
+                    : "Each player should use their individual Square payment link to pay their own fee. Square collects the payer’s full name and Computing ID. Registration is confirmed after both payments are received."}
               </p>
             </div>
             {team.is_waitlist ? (
@@ -201,18 +201,24 @@ export default async function DashboardPage({
               <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-primary shadow-soft">
                 Square payment accepted!
               </div>
-            ) : env.squareLink ? (
-              <a
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-                href={env.squareLink}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open Square payment link
-              </a>
             ) : (
-              <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-muted-foreground">
-                Add `NEXT_PUBLIC_SQUARE_LINK` in `.env.local`.
+              <div className="flex flex-wrap gap-2">
+                <a
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+                  href={team.player_one_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Pay {team.player_one_name} {playerOneAmount}
+                </a>
+                <a
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+                  href={team.player_two_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Pay {team.player_two_name} {playerTwoAmount}
+                </a>
               </div>
             )}
           </div>
@@ -331,7 +337,7 @@ export default async function DashboardPage({
                       <p className="mt-2 text-2xl font-semibold text-foreground">
                         {formatCurrency(team.amount_cents)}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">Paid separately: {team.player_one_name} ({team.player_one_type === "social" ? "Social" : "General"}, {playerOneAmount}) • {team.player_two_name} ({team.player_two_type === "social" ? "Social" : "General"}, {playerTwoAmount})</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Paid separately: {team.player_one_name} ({team.player_one_type === "social" ? "Social Team" : "Non-Social Team"}, {playerOneAmount}) • {team.player_two_name} ({team.player_two_type === "social" ? "Social Team" : "Non-Social Team"}, {playerTwoAmount})</p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {team.payment_status === "approved"
                           ? "Square payment approved"

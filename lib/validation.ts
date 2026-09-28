@@ -13,9 +13,11 @@ export const signupSchema = z
     teamName: z.string().trim().min(3).max(40),
     playerOneName: z.string().trim().min(2).max(40),
     playerOneEmail: uvaEmail,
+    playerOneDuprId: z.string().trim().min(1, "Enter player one's DUPR ID.").max(40),
     playerOneType: z.enum(["social", "general"]),
     playerTwoName: z.string().trim().min(2).max(40),
     playerTwoEmail: uvaEmail,
+    playerTwoDuprId: z.string().trim().min(1, "Enter player two's DUPR ID.").max(40),
     playerTwoType: z.enum(["social", "general"]),
     password: z.string().min(6, "Use a password with at least 6 characters.").max(72)
   })

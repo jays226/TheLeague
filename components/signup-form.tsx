@@ -10,19 +10,25 @@ const initialState = {
   teamName: "",
   playerOneName: "",
   playerOneEmail: "",
+  playerOneDuprId: "",
   playerOneType: "general",
   playerTwoName: "",
   playerTwoEmail: "",
+  playerTwoDuprId: "",
   playerTwoType: "general",
   password: ""
 };
 
 export function SignupForm({
   isWaitlistMode = false,
-  isSocialDiscountActive = true
+  isSocialDiscountActive = true,
+  socialSquareLink,
+  nonSocialSquareLink
 }: {
   isWaitlistMode?: boolean;
   isSocialDiscountActive?: boolean;
+  socialSquareLink: string;
+  nonSocialSquareLink: string;
 }) {
   const [form, setForm] = useState(initialState);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +114,19 @@ export function SignupForm({
             {fieldErrors.playerOneName ? (
               <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerOneName}</p>
             ) : null}
+            <label className="block text-sm font-medium text-foreground" htmlFor="playerOneDuprId">
+              Player one DUPR ID
+            </label>
+            <Input
+              id="playerOneDuprId"
+              placeholder="Enter DUPR ID"
+              value={form.playerOneDuprId}
+              onChange={(event) => updateField("playerOneDuprId", event.target.value)}
+              required
+            />
+            {fieldErrors.playerOneDuprId ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerOneDuprId}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground" htmlFor="playerOneEmail">
@@ -133,7 +152,7 @@ export function SignupForm({
               value={form.playerOneType}
               onChange={(event) => updateField("playerOneType", event.target.value)}
             >
-              <option value="general">General — $15/player</option>
+              <option value="general">Non-Social Team — $15/player</option>
               <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
             </select>
           </div>
@@ -153,6 +172,19 @@ export function SignupForm({
             />
             {fieldErrors.playerTwoName ? (
               <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerTwoName}</p>
+            ) : null}
+            <label className="block text-sm font-medium text-foreground" htmlFor="playerTwoDuprId">
+              Player two DUPR ID
+            </label>
+            <Input
+              id="playerTwoDuprId"
+              placeholder="Enter DUPR ID"
+              value={form.playerTwoDuprId}
+              onChange={(event) => updateField("playerTwoDuprId", event.target.value)}
+              required
+            />
+            {fieldErrors.playerTwoDuprId ? (
+              <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerTwoDuprId}</p>
             ) : null}
           </div>
           <div className="space-y-2">
@@ -179,7 +211,7 @@ export function SignupForm({
               value={form.playerTwoType}
               onChange={(event) => updateField("playerTwoType", event.target.value)}
             >
-              <option value="general">General — $15/player</option>
+              <option value="general">Non-Social Team — $15/player</option>
               <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
             </select>
           </div>
@@ -210,9 +242,16 @@ export function SignupForm({
             </>
           ) : (
             <>
-              <p>Choose Social or General for each player. Social status is verified against the Social roster.</p>
-              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 5, Social Team players pay $5 and General Team players pay $15; each team must include at least one Social Team player. After Oct 5, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
-              <p className="mt-2">After registering, pay through the <a className="font-semibold text-primary underline" href="https://square.link/u/0MjJczgc" rel="noreferrer" target="_blank">Square payment link</a>.</p>
+              <p>Choose Social Team or Non-Social Team for each player. Social status is verified against the Social roster. Enter each player&apos;s DUPR ID so match results can be recorded.</p>
+              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 5, Social Team players pay $5 and Non-Social Team players pay $15; each team must include at least one Social Team player. After Oct 5, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
+              <p className="mt-2">
+                After registering, each player pays their own fee. {isSocialDiscountActive ? <>
+                  Social Team players use the <a className="font-semibold text-primary underline" href={socialSquareLink} rel="noreferrer" target="_blank">Social Team payment link</a>; Non-Social Team players use the {" "}
+                  <a className="font-semibold text-primary underline" href={nonSocialSquareLink} rel="noreferrer" target="_blank">Non-Social Team payment link</a>.
+                </> : <>
+                  All players use the <a className="font-semibold text-primary underline" href={nonSocialSquareLink} rel="noreferrer" target="_blank">$15 payment link</a>.
+                </>}
+              </p>
               <p className="mt-2">Your registration is confirmed once payment from both players is received.</p>
             </>
           )}

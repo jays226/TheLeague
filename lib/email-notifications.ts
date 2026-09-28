@@ -113,12 +113,12 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
 
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, one more step to enter The League`;
-  const squareLink = env.squareLink;
   const playerOneFee = formatCurrency(team.player_one_fee_cents);
   const playerTwoFee = formatCurrency(team.player_two_fee_cents);
-  const playerOneType = team.player_one_type === "social" ? "Social" : "General";
-  const playerTwoType = team.player_two_type === "social" ? "Social" : "General";
-  const playerFeeSummary = `${team.player_one_name} (${playerOneType}) pays ${playerOneFee}; ${team.player_two_name} (${playerTwoType}) pays ${playerTwoFee}.`;
+  const playerOneType = team.player_one_type === "social" ? "Social Team" : "Non-Social Team";
+  const playerTwoType = team.player_two_type === "social" ? "Social Team" : "Non-Social Team";
+  const playerOneSquareLink = team.player_one_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink;
+  const playerTwoSquareLink = team.player_two_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink;
 
   if (team.is_waitlist) {
     await sendMailWithAuditBcc(transporter, {
@@ -172,9 +172,10 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "There's just one final step to complete your entry.",
       "",
-      `Each player pays their own entry fee separately. ${playerFeeSummary} Social status will be checked against the Social roster.`,
+      `Each player pays their own entry fee separately: ${team.player_one_name} (${playerOneType}) owes ${playerOneFee}; ${team.player_two_name} (${playerTwoType}) owes ${playerTwoFee}. Social status will be checked against the Social roster.`,
       "",
-      `Pay through Square here: ${squareLink}`,
+      `${team.player_one_name}'s Square payment link: ${playerOneSquareLink}`,
+      `${team.player_two_name}'s Square payment link: ${playerTwoSquareLink}`,
       "Your full name and Computing ID will be collected with your payment.",
       "Your registration is confirmed once payments from both players are received and approved.",
       "",
@@ -210,12 +211,14 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               There’s just one final step to complete your entry.
             </p>
             <p>
-              Each player pays their own entry fee separately. ${playerFeeSummary} Social status will be checked against the Social roster.
+              Each player pays their own entry fee separately: <strong>${team.player_one_name}</strong> (${playerOneType}) owes <strong>${playerOneFee}</strong>; <strong>${team.player_two_name}</strong> (${playerTwoType}) owes <strong>${playerTwoFee}</strong>. Social status will be checked against the Social roster.
             </p>
             <p>
-              <strong><a href="${squareLink}" style="color: #1d6042; text-decoration: none;">Pay through Square</a></strong>
+              <strong><a href="${playerOneSquareLink}" style="color: #1d6042; text-decoration: none;">${team.player_one_name}'s ${playerOneType} payment link</a></strong> (${playerOneFee})
               <br />
-              <span style="color: #5a6d62;">Your full name and Computing ID will be collected with your payment.</span>
+              <strong><a href="${playerTwoSquareLink}" style="color: #1d6042; text-decoration: none;">${team.player_two_name}'s ${playerTwoType} payment link</a></strong> (${playerTwoFee})
+              <br />
+              <span style="color: #5a6d62;">Square collects each payer&apos;s full name and Computing ID.</span>
             </p>
             <p>Your registration is confirmed once payments from both players are received and approved.</p>
             <p>
@@ -256,7 +259,9 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
       "",
       `Team name: ${team.team_name}`,
       `Player 1: ${team.player_one_name} (${team.player_one_email})`,
-      `Player 2: ${team.player_two_name} (${team.player_two_email})`
+      `Player 1 DUPR ID: ${team.player_one_dupr_id || "Not provided"}`,
+      `Player 2: ${team.player_two_name} (${team.player_two_email})`,
+      `Player 2 DUPR ID: ${team.player_two_dupr_id || "Not provided"}`
     ].join("\n"),
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #173525;">
@@ -264,7 +269,9 @@ export async function sendAdminSignupAlert(team: TeamRecord) {
         <p>A new team has signed up for <strong>The League</strong>.</p>
         <p><strong>Team name:</strong> ${team.team_name}</p>
         <p><strong>Player 1:</strong> ${team.player_one_name} (${team.player_one_email})</p>
+        <p><strong>Player 1 DUPR ID:</strong> ${team.player_one_dupr_id || "Not provided"}</p>
         <p><strong>Player 2:</strong> ${team.player_two_name} (${team.player_two_email})</p>
+        <p><strong>Player 2 DUPR ID:</strong> ${team.player_two_dupr_id || "Not provided"}</p>
       </div>
     `
   });

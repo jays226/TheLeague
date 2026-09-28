@@ -366,6 +366,8 @@ async function ensureBootstrap() {
       `);
       await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_one_type text NOT NULL DEFAULT 'general'`);
       await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_two_type text NOT NULL DEFAULT 'general'`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_one_dupr_id text`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_two_dupr_id text`);
       await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_one_fee_cents integer`);
       await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_two_fee_cents integer`);
       await pool.query(`UPDATE teams SET player_one_fee_cents = amount_cents / 2 WHERE player_one_fee_cents IS NULL`);
@@ -445,8 +447,10 @@ export type TeamRecord = {
   team_name: string;
   player_one_name: string;
   player_one_email: string;
+  player_one_dupr_id: string | null;
   player_two_name: string;
   player_two_email: string;
+  player_two_dupr_id: string | null;
   password_hash: string;
   verification_status: unknown;
   payment_status: "pending" | "approved";
@@ -466,9 +470,11 @@ export type CreateTeamInput = {
   teamName: string;
   playerOneName: string;
   playerOneEmail: string;
+  playerOneDuprId: string;
   playerOneType: "social" | "general";
   playerTwoName: string;
   playerTwoEmail: string;
+  playerTwoDuprId: string;
   playerTwoType: "social" | "general";
   passwordHash: string;
   verificationStatus: string;
@@ -715,8 +721,10 @@ export async function createTeam(input: CreateTeamInput) {
         team_name,
         player_one_name,
         player_one_email,
+        player_one_dupr_id,
         player_two_name,
         player_two_email,
+        player_two_dupr_id,
         password_hash,
         verification_status,
         payment_status,
@@ -729,7 +737,7 @@ export async function createTeam(input: CreateTeamInput) {
         access_token,
         created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'pending', $10, $11, $12, $13, $14, $15, $16, now()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, 'pending', $12, $13, $14, $15, $16, $17, $18, now()
       )
       RETURNING *
       `,
@@ -739,8 +747,10 @@ export async function createTeam(input: CreateTeamInput) {
         input.teamName,
         input.playerOneName,
         input.playerOneEmail,
+        input.playerOneDuprId,
         input.playerTwoName,
         input.playerTwoEmail,
+        input.playerTwoDuprId,
         input.passwordHash,
         input.verificationStatus,
         input.amountCents ?? input.playerOneFeeCents + input.playerTwoFeeCents,
@@ -1039,8 +1049,10 @@ export async function createTeamByAdmin(input: {
   teamName: string;
   playerOneName: string;
   playerOneEmail: string;
+  playerOneDuprId: string;
   playerTwoName: string;
   playerTwoEmail: string;
+  playerTwoDuprId: string;
   playerOneType: PlayerType;
   playerTwoType: PlayerType;
   passwordHash: string;
@@ -1056,8 +1068,10 @@ export async function createTeamByAdmin(input: {
         team_name,
         player_one_name,
         player_one_email,
+        player_one_dupr_id,
         player_two_name,
         player_two_email,
+        player_two_dupr_id,
         password_hash,
         verification_status,
         payment_status,
@@ -1070,8 +1084,8 @@ export async function createTeamByAdmin(input: {
         created_at,
         paid_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10, $11, $12, $13, $14, $15, now(),
-        CASE WHEN $9 = 'approved' THEN now() ELSE NULL END
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, $11, $12, $13, $14, $15, $16, $17, now(),
+        CASE WHEN $11 = 'approved' THEN now() ELSE NULL END
       )
     `,
     [
@@ -1080,8 +1094,10 @@ export async function createTeamByAdmin(input: {
       input.teamName,
       input.playerOneName,
       input.playerOneEmail,
+      input.playerOneDuprId,
       input.playerTwoName,
       input.playerTwoEmail,
+      input.playerTwoDuprId,
       input.passwordHash,
       input.paymentStatus,
       input.amountCents ?? getPlayerFeeCents(input.playerOneType) + getPlayerFeeCents(input.playerTwoType),
@@ -1099,9 +1115,11 @@ export async function updateTeamByAdmin(input: {
   teamName: string;
   playerOneName: string;
   playerOneEmail: string;
+  playerOneDuprId?: string;
   playerOneType: PlayerType;
   playerTwoName: string;
   playerTwoEmail: string;
+  playerTwoDuprId?: string;
   playerTwoType: PlayerType;
   paymentStatus: TeamRecord["payment_status"];
   passwordHash?: string;
@@ -1128,6 +1146,8 @@ export async function updateTeamByAdmin(input: {
         amount_cents = $11,
         player_one_fee_cents = $12,
         player_two_fee_cents = $13,
+        player_one_dupr_id = COALESCE($14, player_one_dupr_id),
+        player_two_dupr_id = COALESCE($15, player_two_dupr_id),
         paid_at = CASE
           WHEN $10 = 'approved' THEN COALESCE(paid_at, now())
           ELSE NULL
@@ -1148,7 +1168,9 @@ export async function updateTeamByAdmin(input: {
       getPlayerFeeCents(input.playerOneType, new Date(currentTeam.created_at)) +
         getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at)),
       getPlayerFeeCents(input.playerOneType, new Date(currentTeam.created_at)),
-      getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at))
+      getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at)),
+      input.playerOneDuprId ?? null,
+      input.playerTwoDuprId ?? null
     ]
   );
 }

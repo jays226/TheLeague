@@ -5,6 +5,7 @@ import { RegistrationCountdown } from "@/components/registration-countdown";
 import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
 import { listSlots, listTeams, type SlotRecord } from "@/lib/db";
+import { env } from "@/lib/env";
 import { isSocialDiscountActive } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +92,7 @@ export default async function HomePage() {
                 </div>
                 <div className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
                   <span className="block text-center">
-                    Fall 2026 • Social Team: {socialDiscountActive ? <><strong>$5/player</strong> through Oct 5; </> : <><strong>$15/player</strong>; </>}General Team: <strong>$15/player</strong>
+                    Fall 2026 • Social Team: {socialDiscountActive ? <><strong>$5/player</strong> through Oct 5; </> : <><strong>$15/player</strong>; </>}Non-Social Team: <strong>$15/player</strong>
                   </span>
                 </div>
                 <RegistrationCountdown />
@@ -195,7 +196,7 @@ export default async function HomePage() {
                     </p>
                     <p className="mt-3 text-lg font-semibold text-foreground">
                       {socialDiscountActive
-                        ? "Through October 5, Social Team players pay $5 and General Team players pay $15. Each team needs one Social Team player; after October 5, everyone pays $15."
+                        ? "Through October 5, Social Team players pay $5 and Non-Social Team players pay $15. Each team needs one Social Team player; after October 5, everyone pays $15."
                         : "All players pay $15 each. Social status is still recorded and checked against the Social roster."}
                     </p>
                   </div>
@@ -341,7 +342,12 @@ export default async function HomePage() {
                         {socialDiscountActive ? "$5–$15/player" : "$15/player"}
                       </div>
                     </div>
-                    <SignupForm isWaitlistMode={leagueIsFull} isSocialDiscountActive={socialDiscountActive} />
+                    <SignupForm
+                      isWaitlistMode={leagueIsFull}
+                      isSocialDiscountActive={socialDiscountActive}
+                      socialSquareLink={env.socialSquareLink}
+                      nonSocialSquareLink={env.nonSocialSquareLink}
+                    />
                   </div>
                 </Card>
               </div>

@@ -38,7 +38,7 @@ npm run dev
 
 You still need to provide:
 
-- `NEXT_PUBLIC_SQUARE_LINK` (defaults to the Fall 2026 Square checkout link)
+- `NEXT_PUBLIC_SOCIAL_SQUARE_LINK` and `NEXT_PUBLIC_NON_SOCIAL_SQUARE_LINK` (default to the Fall 2026 Social and Non-Social checkout links)
 - `ADMIN_PORTAL_PASSWORD`
 - `EMAIL_VERIFICATION_API_KEY` if you want real deliverability checks
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` if you want payment approval emails sent automatically
@@ -52,7 +52,8 @@ You still need to provide:
 - When an admin approves a team payment, the app can email both team members if SMTP is configured.
 - Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8.
 - Weekly slots are Monday through Wednesday, 5:00–5:45 PM at Snyder Courts and 6:00–6:45 PM at Perry Courts.
-- Social players pay $5 per player through October 5; General players pay $15. After October 5, all players pay $15. Teams registering through October 5 need at least one Social member, verified against the Social roster.
+- Social Team players pay $5 per player through October 5; Non-Social Team players pay $15. After October 5, all players pay $15. Teams registering through October 5 need at least one Social Team player, verified against the Social roster.
+- Each player must provide a DUPR ID at signup so results can be recorded in DUPR.
 - Fall 2026 is capped at 24 teams across six weekly slots, with capacity for 4 teams per slot.
 - Playoff prizes: $250 for 1st place, $100 for 2nd, and $50 for 3rd.
 - Social pricing ends Monday, October 5, 2026 at 11:59 PM EDT.

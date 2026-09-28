@@ -154,6 +154,12 @@ export async function rejectReservationAction(formData: FormData) {
 export async function createTeamAction(formData: FormData) {
   await requireAdmin();
 
+  const playerOneDuprId = String(formData.get("playerOneDuprId") || "").trim();
+  const playerTwoDuprId = String(formData.get("playerTwoDuprId") || "").trim();
+  if (!playerOneDuprId || !playerTwoDuprId) {
+    throw new Error("Enter a DUPR ID for each player.");
+  }
+
   const playerOneType = String(formData.get("playerOneType") || "general") === "social" ? "social" : "general";
   const playerTwoType = String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general";
   if (isSocialDiscountActive() && playerOneType !== "social" && playerTwoType !== "social") {
@@ -165,9 +171,11 @@ export async function createTeamAction(formData: FormData) {
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
     playerOneEmail: String(formData.get("playerOneEmail") || "").trim().toLowerCase(),
+    playerOneDuprId,
     playerOneType,
     playerTwoName: String(formData.get("playerTwoName") || "").trim(),
     playerTwoEmail: String(formData.get("playerTwoEmail") || "").trim().toLowerCase(),
+    playerTwoDuprId,
     playerTwoType,
     passwordHash: hashPassword(String(formData.get("password") || "").trim()),
     paymentStatus:
@@ -189,9 +197,11 @@ export async function updateTeamAction(formData: FormData) {
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
     playerOneEmail: String(formData.get("playerOneEmail") || "").trim().toLowerCase(),
+    playerOneDuprId: String(formData.get("playerOneDuprId") || "").trim() || undefined,
     playerOneType: String(formData.get("playerOneType") || "general") === "social" ? "social" : "general",
     playerTwoName: String(formData.get("playerTwoName") || "").trim(),
     playerTwoEmail: String(formData.get("playerTwoEmail") || "").trim().toLowerCase(),
+    playerTwoDuprId: String(formData.get("playerTwoDuprId") || "").trim() || undefined,
     playerTwoType: String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general",
     paymentStatus:
       String(formData.get("paymentStatus") || "pending") === "approved" ? "approved" : "pending",

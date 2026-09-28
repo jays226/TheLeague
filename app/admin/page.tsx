@@ -505,6 +505,9 @@ export default async function AdminPage({
                     <p className="mt-1 text-sm text-muted-foreground">
                       {team.player_one_email} • {team.player_two_email}
                     </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      DUPR IDs: {team.player_one_dupr_id || "Not provided"} • {team.player_two_dupr_id || "Not provided"}
+                    </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Joined {new Date(team.created_at).toLocaleString()}
@@ -538,8 +541,14 @@ export default async function AdminPage({
                 required
                 type="email"
               />
+              <input
+                className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                name="playerOneDuprId"
+                placeholder="Player one DUPR ID"
+                required
+              />
               <select className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm" name="playerOneType" defaultValue="general">
-                <option value="general">Player one: General</option>
+                <option value="general">Player one: Non-Social Team</option>
                 <option value="social">Player one: Social</option>
               </select>
               <input
@@ -555,8 +564,14 @@ export default async function AdminPage({
                 required
                 type="email"
               />
+              <input
+                className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                name="playerTwoDuprId"
+                placeholder="Player two DUPR ID"
+                required
+              />
               <select className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm" name="playerTwoType" defaultValue="general">
-                <option value="general">Player two: General</option>
+                <option value="general">Player two: Non-Social Team</option>
                 <option value="social">Player two: Social</option>
               </select>
               <input
@@ -600,7 +615,10 @@ export default async function AdminPage({
                           {team.player_one_name} and {team.player_two_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {team.player_one_type === "social" ? "Social" : "General"} ({formatCurrency(team.player_one_fee_cents)}) + {team.player_two_type === "social" ? "Social" : "General"} ({formatCurrency(team.player_two_fee_cents)}) = {formatCurrency(team.amount_cents)}
+                          DUPR IDs: {team.player_one_dupr_id || "Not provided"} • {team.player_two_dupr_id || "Not provided"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {team.player_one_type === "social" ? "Social Team" : "Non-Social Team"} ({formatCurrency(team.player_one_fee_cents)}) + {team.player_two_type === "social" ? "Social Team" : "Non-Social Team"} ({formatCurrency(team.player_two_fee_cents)}) = {formatCurrency(team.amount_cents)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Current slot:{" "}
@@ -681,8 +699,14 @@ export default async function AdminPage({
                         required
                         type="email"
                       />
+                      <input
+                        className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                        defaultValue={team.player_one_dupr_id || ""}
+                        name="playerOneDuprId"
+                        placeholder="Player one DUPR ID"
+                      />
                       <select className="h-11 rounded-xl border border-border bg-white px-4 text-sm" defaultValue={team.player_one_type} name="playerOneType">
-                        <option value="general">Player one: General</option>
+                        <option value="general">Player one: Non-Social Team</option>
                         <option value="social">Player one: Social</option>
                       </select>
                       <input
@@ -698,8 +722,14 @@ export default async function AdminPage({
                         required
                         type="email"
                       />
+                      <input
+                        className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                        defaultValue={team.player_two_dupr_id || ""}
+                        name="playerTwoDuprId"
+                        placeholder="Player two DUPR ID"
+                      />
                       <select className="h-11 rounded-xl border border-border bg-white px-4 text-sm" defaultValue={team.player_two_type} name="playerTwoType">
-                        <option value="general">Player two: General</option>
+                        <option value="general">Player two: Non-Social Team</option>
                         <option value="social">Player two: Social</option>
                       </select>
                       <input

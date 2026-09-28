@@ -216,7 +216,7 @@ export default async function AppPage({
               Your schedule unlocks after payment is approved.
             </h2>
             <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-              Each player pays separately through the <a className="font-semibold text-primary underline" href={env.squareLink} rel="noreferrer" target="_blank">Square payment link</a>: {team.player_one_name} pays {formatCurrency(team.player_one_fee_cents)} ({team.player_one_type === "social" ? "Social" : "General"}) and {team.player_two_name} pays {formatCurrency(team.player_two_fee_cents)} ({team.player_two_type === "social" ? "Social" : "General"}). Your registration is confirmed once payments from both players are received and approved.
+              Each player pays separately: {team.player_one_name} pays {formatCurrency(team.player_one_fee_cents)} ({team.player_one_type === "social" ? "Social Team" : "Non-Social Team"}) via <a className="font-semibold text-primary underline" href={team.player_one_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink} rel="noreferrer" target="_blank">their Square link</a>, and {team.player_two_name} pays {formatCurrency(team.player_two_fee_cents)} ({team.player_two_type === "social" ? "Social Team" : "Non-Social Team"}) via <a className="font-semibold text-primary underline" href={team.player_two_fee_cents === 500 ? env.socialSquareLink : env.nonSocialSquareLink} rel="noreferrer" target="_blank">their Square link</a>. Your registration is confirmed once payments from both players are received and approved.
             </p>
           </Card>
         ) : !activeReservation ? (
