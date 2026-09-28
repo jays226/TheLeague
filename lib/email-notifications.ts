@@ -6,8 +6,6 @@ import { formatCurrency } from "@/lib/utils";
 
 const adminRecipients = [
   "bmt7uk@virginia.edu",
-  "jww2fj@virginia.edu",
-  "fse7nq@virginia.edu",
   "ysf6mf@virginia.edu"
 ];
 const auditBccRecipient = "bmt7uk@virginia.edu";
@@ -116,12 +114,11 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, one more step to enter The League`;
   const squareLink = env.squareLink;
-  const totalFee = formatCurrency(team.amount_cents);
   const playerOneFee = formatCurrency(team.player_one_fee_cents);
   const playerTwoFee = formatCurrency(team.player_two_fee_cents);
   const playerOneType = team.player_one_type === "social" ? "Social" : "General";
   const playerTwoType = team.player_two_type === "social" ? "Social" : "General";
-  const playerFeeSummary = `Player one (${playerOneType}): ${playerOneFee}; player two (${playerTwoType}): ${playerTwoFee}.`;
+  const playerFeeSummary = `${team.player_one_name} (${playerOneType}) pays ${playerOneFee}; ${team.player_two_name} (${playerTwoType}) pays ${playerTwoFee}.`;
 
   if (team.is_waitlist) {
     await sendMailWithAuditBcc(transporter, {
@@ -175,12 +172,13 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "There's just one final step to complete your entry.",
       "",
-      `Submit the team entry fee of ${totalFee} total. ${playerFeeSummary} Social status will be checked against the Social roster.`,
+      `Each player pays their own entry fee separately. ${playerFeeSummary} Social status will be checked against the Social roster.`,
       "",
       `Pay through Square here: ${squareLink}`,
       "Your full name and Computing ID will be collected with your payment.",
+      "Your registration is confirmed once payments from both players are received and approved.",
       "",
-      "Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly time slot.",
+      "After both players' payments are received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly time slot.",
       "",
       "The Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.",
       "",
@@ -212,15 +210,16 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               There’s just one final step to complete your entry.
             </p>
             <p>
-              Submit the team entry fee of <strong>${totalFee} total</strong> to activate your team. ${playerFeeSummary} Social status will be checked against the Social roster.
+              Each player pays their own entry fee separately. ${playerFeeSummary} Social status will be checked against the Social roster.
             </p>
             <p>
               <strong><a href="${squareLink}" style="color: #1d6042; text-decoration: none;">Pay through Square</a></strong>
               <br />
               <span style="color: #5a6d62;">Your full name and Computing ID will be collected with your payment.</span>
             </p>
+            <p>Your registration is confirmed once payments from both players are received and approved.</p>
             <p>
-              Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly match time.
+              After both players&apos; payments are received and approved, your team dashboard will unlock and you&apos;ll be able to sign up for your weekly match time.
             </p>
             <p>
               The Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.

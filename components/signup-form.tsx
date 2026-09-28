@@ -134,7 +134,7 @@ export function SignupForm({
               onChange={(event) => updateField("playerOneType", event.target.value)}
             >
               <option value="general">General — $15/player</option>
-              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 4" : "$15/player"}</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
             </select>
           </div>
         </div>
@@ -180,7 +180,7 @@ export function SignupForm({
               onChange={(event) => updateField("playerTwoType", event.target.value)}
             >
               <option value="general">General — $15/player</option>
-              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 4" : "$15/player"}</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
             </select>
           </div>
         </div>
@@ -211,7 +211,7 @@ export function SignupForm({
           ) : (
             <>
               <p>Choose Social or General for each player. Social status is verified against the Social roster.</p>
-              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 4, Social Team players pay $5 and General Team players pay $15; each team must include at least one Social Team player. After Oct 4, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
+              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 5, Social Team players pay $5 and General Team players pay $15; each team must include at least one Social Team player. After Oct 5, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
               <p className="mt-2">After registering, pay through the <a className="font-semibold text-primary underline" href="https://square.link/u/0MjJczgc" rel="noreferrer" target="_blank">Square payment link</a>.</p>
               <p className="mt-2">Your registration is confirmed once payment from both players is received.</p>
             </>

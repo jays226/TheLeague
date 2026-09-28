@@ -157,7 +157,7 @@ export async function createTeamAction(formData: FormData) {
   const playerOneType = String(formData.get("playerOneType") || "general") === "social" ? "social" : "general";
   const playerTwoType = String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general";
   if (isSocialDiscountActive() && playerOneType !== "social" && playerTwoType !== "social") {
-    throw new Error("At least one team member must be designated as a Social Team player through October 4.");
+    throw new Error("At least one team member must be designated as a Social Team player through October 5.");
   }
 
   await createTeamByAdmin({

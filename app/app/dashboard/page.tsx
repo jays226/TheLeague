@@ -99,7 +99,6 @@ export default async function DashboardPage({
   const groupedSlots = groupSlotsByDay(slots, activeReservation);
   const playerOneAmount = formatCurrency(team.player_one_fee_cents);
   const playerTwoAmount = formatCurrency(team.player_two_fee_cents);
-  const totalAmount = formatCurrency(team.amount_cents);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -184,14 +183,14 @@ export default async function DashboardPage({
                   ? "Your team is on the waitlist. We will reach out if spots open."
                   : team.payment_status === "approved"
                     ? "Your team payment has been approved and your account is ready for scheduling."
-                    : `Pay ${totalAmount} total (${playerOneAmount} for player one and ${playerTwoAmount} for player two) to activate your team.`}
+                    : `Each player pays separately: ${playerOneAmount} for ${team.player_one_name} and ${playerTwoAmount} for ${team.player_two_name}.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {team.is_waitlist
                   ? "You do not need to choose a slot right now. If room opens up, we will contact your team by email with next steps."
                   : team.payment_status === "approved"
                     ? "Your schedule now lives on the main portal page. Use the dashboard below to claim a slot or request a switch."
-                    : "Pay through the Square link. Your full name and Computing ID will be collected with your payment."}
+                    : "Each player should use the Square link to pay their own fee. Your full name and Computing ID will be collected with your payment. Registration is confirmed after payments from both players are received."}
               </p>
             </div>
             {team.is_waitlist ? (
@@ -209,7 +208,7 @@ export default async function DashboardPage({
                 rel="noreferrer"
                 target="_blank"
               >
-                Pay with Square
+                Open Square payment link
               </a>
             ) : (
               <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-muted-foreground">
@@ -328,11 +327,11 @@ export default async function DashboardPage({
                   <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Team status</p>
                   <div className="mt-5 space-y-4">
                     <div className="rounded-2xl bg-white/80 p-4">
-                      <p className="text-sm text-muted-foreground">League fee</p>
+                      <p className="text-sm text-muted-foreground">Total team fee</p>
                       <p className="mt-2 text-2xl font-semibold text-foreground">
                         {formatCurrency(team.amount_cents)}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">Player one: {team.player_one_type === "social" ? "Social" : "General"} ({playerOneAmount}) • Player two: {team.player_two_type === "social" ? "Social" : "General"} ({playerTwoAmount})</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Paid separately: {team.player_one_name} ({team.player_one_type === "social" ? "Social" : "General"}, {playerOneAmount}) • {team.player_two_name} ({team.player_two_type === "social" ? "Social" : "General"}, {playerTwoAmount})</p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {team.payment_status === "approved"
                           ? "Square payment approved"

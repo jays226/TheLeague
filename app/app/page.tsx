@@ -23,6 +23,7 @@ import {
 } from "@/lib/db";
 import { getLeagueGameWindow } from "@/lib/eastern-time";
 import { generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
+import { env } from "@/lib/env";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 
@@ -215,7 +216,7 @@ export default async function AppPage({
               Your schedule unlocks after payment is approved.
             </h2>
             <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-              Your team fee is {formatCurrency(team.amount_cents)} total: {team.player_one_type === "social" ? "Social" : "General"} player {formatCurrency(team.player_one_fee_cents)} and {team.player_two_type === "social" ? "Social" : "General"} player {formatCurrency(team.player_two_fee_cents)}. Once payment is approved, return here to see your slot and weekly league schedule.
+              Each player pays separately through the <a className="font-semibold text-primary underline" href={env.squareLink} rel="noreferrer" target="_blank">Square payment link</a>: {team.player_one_name} pays {formatCurrency(team.player_one_fee_cents)} ({team.player_one_type === "social" ? "Social" : "General"}) and {team.player_two_name} pays {formatCurrency(team.player_two_fee_cents)} ({team.player_two_type === "social" ? "Social" : "General"}). Your registration is confirmed once payments from both players are received and approved.
             </p>
           </Card>
         ) : !activeReservation ? (

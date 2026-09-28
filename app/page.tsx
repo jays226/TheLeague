@@ -91,7 +91,7 @@ export default async function HomePage() {
                 </div>
                 <div className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
                   <span className="block text-center">
-                    Fall 2026 • Social Team: {socialDiscountActive ? <><strong>$5/player</strong> through Oct 4; </> : <><strong>$15/player</strong>; </>}General Team: <strong>$15/player</strong>
+                    Fall 2026 • Social Team: {socialDiscountActive ? <><strong>$5/player</strong> through Oct 5; </> : <><strong>$15/player</strong>; </>}General Team: <strong>$15/player</strong>
                   </span>
                 </div>
                 <RegistrationCountdown />
@@ -175,7 +175,7 @@ export default async function HomePage() {
                   <p>
                     The regular season runs October 12 through November 4, followed by the playoff tournament on November 8.
                   </p>
-                  <p>Registration closes October 4 for Social pricing. The league is limited to 24 teams.</p>
+                  <p>Social pricing ends October 5. The league is limited to 24 teams.</p>
                 </div>
               </Card>
 
@@ -195,7 +195,7 @@ export default async function HomePage() {
                     </p>
                     <p className="mt-3 text-lg font-semibold text-foreground">
                       {socialDiscountActive
-                        ? "Through October 4, Social Team players pay $5 and General Team players pay $15. Each team needs one Social Team player; after October 4, everyone pays $15."
+                        ? "Through October 5, Social Team players pay $5 and General Team players pay $15. Each team needs one Social Team player; after October 5, everyone pays $15."
                         : "All players pay $15 each. Social status is still recorded and checked against the Social roster."}
                     </p>
                   </div>
@@ -324,16 +324,16 @@ export default async function HomePage() {
                           Register for The League
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          Social pricing ends Sunday, October 4, 2026 at 11:59 PM EDT.
+                          Social pricing ends Monday, October 5, 2026 at 11:59 PM EDT.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          Each team must include at least one Social Team player until Oct 4.
+                          Each team must include at least one Social Team player until Oct 5.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
                           {leagueIsFull
                             ? "Add both players and create a team password to join the waitlist. We will reach out if spots open."
                             : socialDiscountActive
-                              ? "Add both players, choose each player’s team type, and create a team password. At least one player must be designated Social Team through October 4."
+                              ? "Add both players, choose each player’s team type, and create a team password. At least one player must be designated Social Team through October 5."
                               : "Add both players, choose each player’s membership type, and create a team password. Social status will be checked against the roster."}
                         </p>
                       </div>
