@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid team name or password." }, { status: 401 });
     }
 
-    const response = NextResponse.json({ redirectUrl: "/app" });
+    const response = NextResponse.json({ redirectUrl: "/app/dashboard" });
     response.cookies.set(leagueCookieName, team.access_token ?? "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

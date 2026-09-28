@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       console.error("Admin signup alert failed", error);
     }
 
-    const response = NextResponse.json({ redirectUrl: "/app" });
+    const response = NextResponse.json({ redirectUrl: "/app/dashboard" });
     response.cookies.set(leagueCookieName, team?.access_token ?? "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
