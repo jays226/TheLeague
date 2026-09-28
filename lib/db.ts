@@ -639,7 +639,7 @@ function hydrateReservation<T extends ReservationRecord>(reservation: T) {
   return {
     ...reservation,
     day_label: slot?.dayLabel,
-    time_label: slot?.timeWindowLabel ?? slot?.timeLabel,
+    time_label: slot?.timeWindowLabel,
     capacity: slot?.capacity
   };
 }
@@ -859,7 +859,7 @@ export async function listTeamsWithReservations() {
       ...team,
       active_slot_id: reservation?.slot_id ?? null,
       active_day_label: slot?.dayLabel ?? null,
-      active_time_label: slot?.timeWindowLabel ?? slot?.timeLabel ?? null,
+      active_time_label: slot?.timeWindowLabel ?? null,
       active_reservation_status: reservation?.status ?? null
     } satisfies AdminTeamRow;
   });
