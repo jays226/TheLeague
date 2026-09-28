@@ -301,7 +301,7 @@ export function LiveBracket({
             {mode === "admin" ? "Admin bracket" : "Live bracket"}
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
-            League playoff picture
+            Fall 2026 playoff picture · Tournament Sunday, November 8
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
             Teams qualify only if they have at least 1 win, at least 3 total games played, and no

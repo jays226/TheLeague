@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const deadline = new Date("2026-03-26T23:59:00-04:00").getTime();
+const deadline = new Date("2026-10-05T00:00:00-04:00").getTime();
 
 function getTimeLeft() {
   const diff = Math.max(deadline - Date.now(), 0);
@@ -32,10 +32,10 @@ export function RegistrationCountdown() {
     return (
       <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-[rgba(245,132,79,0.24)] bg-white/70 px-5 py-4 text-center shadow-soft">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/65">
-          Registration countdown
+          Social pricing
         </p>
         <p className="mt-2 text-lg font-semibold text-foreground">
-          Registration deadline has passed.
+          Social pricing deadline has passed. All players pay $15.
         </p>
       </div>
     );
@@ -44,7 +44,10 @@ export function RegistrationCountdown() {
   return (
     <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-white/70 bg-white/72 px-4 py-4 text-center shadow-soft backdrop-blur sm:px-5">
       <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/65 sm:text-xs sm:tracking-[0.16em]">
-        Registration closes Thursday, March 26, 2026 at 11:59 PM
+        Social pricing ends Sunday, October 4, 2026 at 11:59 PM EDT
+      </p>
+      <p className="mt-2 text-center text-sm font-medium text-foreground">
+        Each team must include at least one Social Team player until Oct 4.
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2 sm:gap-3">
         {[

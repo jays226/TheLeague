@@ -139,60 +139,9 @@ type BracketDefinition = {
 };
 
 const seasonDatesByDay = {
-  monday: ["2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20"],
-  tuesday: ["2026-03-31", "2026-04-07", "2026-04-14", "2026-04-21"],
-  wednesday: ["2026-04-01", "2026-04-08", "2026-04-15", "2026-04-22"]
-} as const;
-
-const matchLocationsByDateAndTime = {
-  "2026-03-30": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-03-31": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-01": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-06": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-07": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-08": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-13": {
-    "6:00 PM": ["Snyder Pickleball Court 12B", "Snyder Pickleball Court 13B"],
-    "7:00 PM": ["Snyder Pickleball Court 12B", "Snyder Pickleball Court 13B"]
-  },
-  "2026-04-14": {
-    "6:00 PM": ["Perry-Fishburne (Old Dorms) Pickleball Court 4A", "Perry-Fishburne (Old Dorms) Pickleball Court 4B"],
-    "7:00 PM": ["Perry-Fishburne (Old Dorms) Pickleball Court 4A", "Perry-Fishburne (Old Dorms) Pickleball Court 4B"]
-  },
-  "2026-04-15": {
-    "6:00 PM": ["Perry-Fishburne (Old Dorms) Pickleball Court 4A", "Perry-Fishburne (Old Dorms) Pickleball Court 4B"],
-    "7:00 PM": ["Perry-Fishburne (Old Dorms) Pickleball Court 4A", "Perry-Fishburne (Old Dorms) Pickleball Court 4B"]
-  },
-  "2026-04-20": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"]
-  },
-  "2026-04-21": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"]
-  },
-  "2026-04-22": {
-    "6:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"],
-    "7:00 PM": ["Snyder Pickleball Court 12A", "Snyder Pickleball Court 12B"]
-  }
+  monday: ["2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02"],
+  tuesday: ["2026-10-13", "2026-10-20", "2026-10-27", "2026-11-03"],
+  wednesday: ["2026-10-14", "2026-10-21", "2026-10-28", "2026-11-04"]
 } as const;
 
 function hashString(input: string) {
@@ -537,18 +486,16 @@ export function generateSlotSchedule(slotId: string, teams: SlotTeam[]) {
       : Array.from({ length: 4 }, (_, index) => rounds[index % rounds.length]);
 
   return selectedRounds.flatMap((pairings, index) =>
-    pairings.map(([homeTeam, awayTeam], pairingIndex) => {
+    pairings.map(([homeTeam, awayTeam]) => {
       const matchDate = dates[index];
-      const locationOptions = matchLocationsByDateAndTime[matchDate]?.[slot.timeLabel];
-
       return {
         slotId,
         dayLabel: slot.dayLabel,
         timeLabel: slot.timeLabel,
         week: index + 1,
         matchDate,
-        dateLabel: `${formatSeasonDate(matchDate)} • ${slot.timeLabel} ET`,
-        locationLabel: locationOptions?.[pairingIndex] ?? null,
+        dateLabel: `${formatSeasonDate(matchDate)} • ${slot.timeWindowLabel} ET`,
+        locationLabel: slot.locationLabel,
         homeTeamId: homeTeam.id,
         homeTeamName: homeTeam.teamName,
         awayTeamId: awayTeam.id,

@@ -33,6 +33,7 @@ function groupSlotsByDay(
       id: string;
       dayLabel: string;
       timeLabel: string;
+      locationLabel: string;
       capacity: number;
       reservedCount: number;
       availableSpots: number;
@@ -53,7 +54,8 @@ function groupSlotsByDay(
     const entry = {
       id: slot.id,
       dayLabel: slot.day_label,
-      timeLabel: slot.time_label,
+      timeLabel: slot.time_window_label,
+      locationLabel: slot.location_label,
       capacity: slot.capacity,
       reservedCount: Number(slot.reserved_count),
       availableSpots: Number(slot.available_spots),
@@ -95,9 +97,9 @@ export default async function DashboardPage({
   const slots = (await listSlots()) as SlotRecord[];
   const stats = await getReservationStats();
   const groupedSlots = groupSlotsByDay(slots, activeReservation);
-  const perPlayerAmount = formatCurrency(team.amount_cents / 2);
-  const totalAmountWhole = `$${Math.round(team.amount_cents / 100)}`;
-  const perPlayerAmountWhole = `$${Math.round(team.amount_cents / 200)}`;
+  const playerOneAmount = formatCurrency(team.player_one_fee_cents);
+  const playerTwoAmount = formatCurrency(team.player_two_fee_cents);
+  const totalAmount = formatCurrency(team.amount_cents);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -174,22 +176,22 @@ export default async function DashboardPage({
                 {team.is_waitlist
                   ? "Waitlist status"
                   : team.payment_status === "approved"
-                    ? "Venmo payment accepted!"
-                    : "Venmo paywall"}
+                    ? "Square payment accepted!"
+                    : "Payment required"}
               </p>
               <p className="mt-2 text-xl font-semibold text-foreground">
                 {team.is_waitlist
                   ? "Your team is on the waitlist. We will reach out if spots open."
                   : team.payment_status === "approved"
                     ? "Your team payment has been approved and your account is ready for scheduling."
-                    : `Pay ${totalAmountWhole} total, or ${perPlayerAmountWhole} per player, as soon as you enter the portal.`}
+                    : `Pay ${totalAmount} total (${playerOneAmount} for player one and ${playerTwoAmount} for player two) to activate your team.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {team.is_waitlist
                   ? "You do not need to choose a slot right now. If room opens up, we will contact your team by email with next steps."
                   : team.payment_status === "approved"
                     ? "Your schedule now lives on the main portal page. Use the dashboard below to claim a slot or request a switch."
-                    : "Send the payment to `@theleague_uva` and include your team name in the note so the admin can approve your account quickly."}
+                    : "Pay through the Square link. Your full name and Computing ID will be collected with your payment."}
               </p>
             </div>
             {team.is_waitlist ? (
@@ -198,20 +200,20 @@ export default async function DashboardPage({
               </div>
             ) : team.payment_status === "approved" ? (
               <div className="rounded-2xl bg-white/85 px-4 py-3 text-sm font-semibold text-primary shadow-soft">
-                Venmo payment accepted!
+                Square payment accepted!
               </div>
-            ) : env.venmoLink ? (
+            ) : env.squareLink ? (
               <a
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-                href={env.venmoLink}
+                href={env.squareLink}
                 rel="noreferrer"
                 target="_blank"
               >
-                Open Venmo link
+                Pay with Square
               </a>
             ) : (
               <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-muted-foreground">
-                Add `NEXT_PUBLIC_VENMO_LINK` in `.env.local`.
+                Add `NEXT_PUBLIC_SQUARE_LINK` in `.env.local`.
               </div>
             )}
           </div>
@@ -330,11 +332,11 @@ export default async function DashboardPage({
                       <p className="mt-2 text-2xl font-semibold text-foreground">
                         {formatCurrency(team.amount_cents)}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">{perPlayerAmount} per player</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Player one: {team.player_one_type === "social" ? "Social" : "General"} ({playerOneAmount}) • Player two: {team.player_two_type === "social" ? "Social" : "General"} ({playerTwoAmount})</p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {team.payment_status === "approved"
-                          ? "Venmo payment approved"
-                          : "Venmo payment pending admin review"}
+                          ? "Square payment approved"
+                          : "Square payment pending admin review"}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-white/80 p-4">

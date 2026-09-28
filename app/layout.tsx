@@ -5,7 +5,7 @@ import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: "The League",
-  description: "UVA's student pickleball league signup and member portal.",
+  description: "Fall 2026 UVA student pickleball league registration and member portal.",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",

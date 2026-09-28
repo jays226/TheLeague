@@ -37,6 +37,7 @@ import { getEasternParts, getLeagueGameWindow } from "@/lib/eastern-time";
 import { env } from "@/lib/env";
 import { generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import { adminCookieName, hashAdminSessionToken } from "@/lib/session";
+import { formatCurrency } from "@/lib/utils";
 
 function getCurrentEasternDateKey(now: Date) {
   const parts = getEasternParts(now);
@@ -73,7 +74,7 @@ export default async function AdminPage({
               League control room
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Review Venmo payments and manually approve pending slot reservations.
+              Review Square payments and manually approve pending slot reservations.
             </p>
             <form action={loginAction} className="mt-6 space-y-4">
               <input
@@ -159,7 +160,7 @@ export default async function AdminPage({
     .filter((game) => game.matchDate <= todayEastern)
     .flatMap((game) => {
       const { opensAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
-      const matchEndsAt = new Date(opensAt.getTime() + 60 * 60 * 1000);
+      const matchEndsAt = new Date(opensAt.getTime() + 45 * 60 * 1000);
 
       if (now < matchEndsAt || game.submissions.length > 0 || game.winnerTeamId) {
         return [];
@@ -537,6 +538,10 @@ export default async function AdminPage({
                 required
                 type="email"
               />
+              <select className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm" name="playerOneType" defaultValue="general">
+                <option value="general">Player one: General</option>
+                <option value="social">Player one: Social</option>
+              </select>
               <input
                 className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                 name="playerTwoName"
@@ -550,6 +555,10 @@ export default async function AdminPage({
                 required
                 type="email"
               />
+              <select className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm" name="playerTwoType" defaultValue="general">
+                <option value="general">Player two: General</option>
+                <option value="social">Player two: Social</option>
+              </select>
               <input
                 className="h-11 rounded-xl border border-border bg-white/80 px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                 name="password"
@@ -589,6 +598,9 @@ export default async function AdminPage({
                         <p className="text-lg font-semibold text-foreground">{team.team_name}</p>
                         <p className="mt-1 text-sm text-muted-foreground">
                           {team.player_one_name} and {team.player_two_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {team.player_one_type === "social" ? "Social" : "General"} ({formatCurrency(team.player_one_fee_cents)}) + {team.player_two_type === "social" ? "Social" : "General"} ({formatCurrency(team.player_two_fee_cents)}) = {formatCurrency(team.amount_cents)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Current slot:{" "}
@@ -669,6 +681,10 @@ export default async function AdminPage({
                         required
                         type="email"
                       />
+                      <select className="h-11 rounded-xl border border-border bg-white px-4 text-sm" defaultValue={team.player_one_type} name="playerOneType">
+                        <option value="general">Player one: General</option>
+                        <option value="social">Player one: Social</option>
+                      </select>
                       <input
                         className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                         defaultValue={team.player_two_name}
@@ -682,6 +698,10 @@ export default async function AdminPage({
                         required
                         type="email"
                       />
+                      <select className="h-11 rounded-xl border border-border bg-white px-4 text-sm" defaultValue={team.player_two_type} name="playerTwoType">
+                        <option value="general">Player two: General</option>
+                        <option value="social">Player two: Social</option>
+                      </select>
                       <input
                         className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring md:col-span-2"
                         name="password"
@@ -706,7 +726,7 @@ export default async function AdminPage({
                         <option value="">No slot assigned</option>
                         {slots.map((slot) => (
                           <option key={slot.id} value={slot.id}>
-                            {slot.day_label} at {slot.time_label}
+                            {slot.day_label}: {slot.time_window_label} at {slot.location_label}
                           </option>
                         ))}
                       </select>
@@ -730,7 +750,7 @@ export default async function AdminPage({
                 <div className="rounded-2xl bg-white/80 p-4" key={slot.id}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-foreground">
-                      {slot.day_label} at {slot.time_label}
+                      {slot.day_label}: {slot.time_window_label} at {slot.location_label}
                     </p>
                     <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
                       {slot.available_spots > 0 ? "Open" : "Full"}

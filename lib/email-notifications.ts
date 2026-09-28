@@ -65,7 +65,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
       "",
       "Visit the website again and log in to your dashboard.",
       "",
-      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
+      "Your Fall 2026 schedule runs October 12 through November 4. The playoff tournament is Sunday, November 8.",
       "",
       "You can log in to your dashboard anytime to view updates, and we'll also send important announcements to this email.",
       "",
@@ -88,7 +88,7 @@ export async function sendPaymentApprovedEmail(team: TeamRecord) {
           Visit the website again and log in to your dashboard.
         </p>
         <p>
-          Game locations, court assignments, and instructions for accessing your full schedule will be sent out on <strong>Sunday, March 29th</strong>.
+          Your Fall 2026 schedule runs October 12 through November 4. The playoff tournament is Sunday, November 8.
         </p>
         <p>
           You can log in to your dashboard anytime to view updates, and we’ll also send important announcements to this email.
@@ -115,9 +115,13 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
 
   const recipients = [team.player_one_email, team.player_two_email];
   const subject = `${team.team_name}, one more step to enter The League`;
-  const venmoLink = env.venmoLink || "https://venmo.com/u/theleague_uva";
+  const squareLink = env.squareLink;
   const totalFee = formatCurrency(team.amount_cents);
-  const perPlayerFee = formatCurrency(team.amount_cents / 2);
+  const playerOneFee = formatCurrency(team.player_one_fee_cents);
+  const playerTwoFee = formatCurrency(team.player_two_fee_cents);
+  const playerOneType = team.player_one_type === "social" ? "Social" : "General";
+  const playerTwoType = team.player_two_type === "social" ? "Social" : "General";
+  const playerFeeSummary = `Player one (${playerOneType}): ${playerOneFee}; player two (${playerTwoType}): ${playerTwoFee}.`;
 
   if (team.is_waitlist) {
     await sendMailWithAuditBcc(transporter, {
@@ -171,13 +175,14 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "There's just one final step to complete your entry.",
       "",
-      `Submit the team entry fee of ${totalFee} total (${perPlayerFee} per player) to activate your team and unlock access to select your weekly match time.`,
+      `Submit the team entry fee of ${totalFee} total. ${playerFeeSummary} Social status will be checked against the Social roster.`,
       "",
-      `Pay @theleague_uva here: ${venmoLink}`,
+      `Pay through Square here: ${squareLink}`,
+      "Your full name and Computing ID will be collected with your payment.",
       "",
       "Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly time slot.",
       "",
-      "Game locations, court assignments, and instructions for accessing your full schedule will be sent out on Sunday, March 29th.",
+      "The Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.",
       "",
       "You'll also be able to log in to your dashboard to view updates, and we'll continue sending important information to this email.",
       "",
@@ -207,18 +212,18 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               There’s just one final step to complete your entry.
             </p>
             <p>
-              Submit the team entry fee of <strong>${totalFee} total (${perPlayerFee} per player)</strong> to activate your team and unlock access to select your weekly match time.
+              Submit the team entry fee of <strong>${totalFee} total</strong> to activate your team. ${playerFeeSummary} Social status will be checked against the Social roster.
             </p>
             <p>
-              <strong>Pay <a href="${venmoLink}" style="color: #1d6042; text-decoration: none;">@theleague_uva</a></strong>
+              <strong><a href="${squareLink}" style="color: #1d6042; text-decoration: none;">Pay through Square</a></strong>
               <br />
-              <span style="color: #5a6d62;">${venmoLink}</span>
+              <span style="color: #5a6d62;">Your full name and Computing ID will be collected with your payment.</span>
             </p>
             <p>
               Once your payment is received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly match time.
             </p>
             <p>
-              Game locations, court assignments, and instructions for accessing your schedule will be sent out on <strong>Sunday, March 29th</strong>.
+              The Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.
             </p>
             <p>
               You can log in to your dashboard anytime to view updates, and we’ll also continue sending important information to this email.

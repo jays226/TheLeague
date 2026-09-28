@@ -32,6 +32,7 @@ import {
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
 import { env } from "@/lib/env";
+import { isSocialDiscountActive } from "@/lib/pricing";
 import { buildPlayoffBracket, generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import {
   adminCookieName,
@@ -153,13 +154,21 @@ export async function rejectReservationAction(formData: FormData) {
 export async function createTeamAction(formData: FormData) {
   await requireAdmin();
 
+  const playerOneType = String(formData.get("playerOneType") || "general") === "social" ? "social" : "general";
+  const playerTwoType = String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general";
+  if (isSocialDiscountActive() && playerOneType !== "social" && playerTwoType !== "social") {
+    throw new Error("At least one team member must be designated as a Social Team player through October 4.");
+  }
+
   await createTeamByAdmin({
     id: createId(),
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
     playerOneEmail: String(formData.get("playerOneEmail") || "").trim().toLowerCase(),
+    playerOneType,
     playerTwoName: String(formData.get("playerTwoName") || "").trim(),
     playerTwoEmail: String(formData.get("playerTwoEmail") || "").trim().toLowerCase(),
+    playerTwoType,
     passwordHash: hashPassword(String(formData.get("password") || "").trim()),
     paymentStatus:
       String(formData.get("paymentStatus") || "pending") === "approved" ? "approved" : "pending",
@@ -180,8 +189,10 @@ export async function updateTeamAction(formData: FormData) {
     teamName: String(formData.get("teamName") || "").trim(),
     playerOneName: String(formData.get("playerOneName") || "").trim(),
     playerOneEmail: String(formData.get("playerOneEmail") || "").trim().toLowerCase(),
+    playerOneType: String(formData.get("playerOneType") || "general") === "social" ? "social" : "general",
     playerTwoName: String(formData.get("playerTwoName") || "").trim(),
     playerTwoEmail: String(formData.get("playerTwoEmail") || "").trim().toLowerCase(),
+    playerTwoType: String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general",
     paymentStatus:
       String(formData.get("paymentStatus") || "pending") === "approved" ? "approved" : "pending",
     passwordHash: password ? hashPassword(password) : undefined

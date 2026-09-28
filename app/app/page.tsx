@@ -215,8 +215,7 @@ export default async function AppPage({
               Your schedule unlocks after payment is approved.
             </h2>
             <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-              Your team fee is {formatCurrency(team.amount_cents)} total. Once payment is approved,
-              return here to see your slot and weekly league schedule.
+              Your team fee is {formatCurrency(team.amount_cents)} total: {team.player_one_type === "social" ? "Social" : "General"} player {formatCurrency(team.player_one_fee_cents)} and {team.player_two_type === "social" ? "Social" : "General"} player {formatCurrency(team.player_two_fee_cents)}. Once payment is approved, return here to see your slot and weekly league schedule.
             </p>
           </Card>
         ) : !activeReservation ? (
@@ -380,8 +379,8 @@ export default async function AppPage({
                   {activeReservation.day_label} • {activeReservation.time_label}
                 </h2>
                 <p className="mt-3 text-base leading-7 text-muted-foreground">
-                  Season runs from Monday, March 30 through Wednesday, April 22. You&apos;ll play four
-                  weekly matches inside this slot.
+                  Fall 2026 runs from Monday, October 12 through Wednesday, November 4. You&apos;ll play four
+                  weekly matches inside this slot; the playoff tournament is Sunday, November 8.
                 </p>
                 <div className="mt-6 rounded-2xl bg-white/80 p-4">
                   <p className="text-sm text-muted-foreground">Teams in your slot</p>

@@ -5,6 +5,7 @@ type SlotCardProps = {
     id: string;
     dayLabel: string;
     timeLabel: string;
+    locationLabel: string;
     capacity: number;
     reservedCount: number;
     availableSpots: number;
@@ -44,6 +45,7 @@ export function SlotCard({
           <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
             {slot.timeLabel}
           </h3>
+          <p className="mt-1 text-sm text-muted-foreground">{slot.locationLabel}</p>
         </div>
         <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
           {status}

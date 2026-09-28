@@ -8,15 +8,24 @@ import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
 import { createAccessToken, createId, leagueCookieName } from "@/lib/session";
 import { signupSchema } from "@/lib/validation";
+import { getPlayerFeeCents, isSocialDiscountActive } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   try {
     const rawData = await request.json();
     const data = signupSchema.parse(rawData);
     await ensureNoExistingTeam(data);
-    const amountCents = 4000;
-    const approvedTeamCount = (await listTeams()).filter((team) => team.payment_status === "approved").length;
-    const isWaitlist = approvedTeamCount >= 24;
+    if (isSocialDiscountActive() && data.playerOneType !== "social" && data.playerTwoType !== "social") {
+      return NextResponse.json(
+        { error: "At least one team member must be designated as a Social Team player through October 4." },
+        { status: 400 }
+      );
+    }
+
+    const registeredTeams = await listTeams();
+    const isWaitlist = registeredTeams.length >= 24;
+    const playerOneFeeCents = getPlayerFeeCents(data.playerOneType);
+    const playerTwoFeeCents = getPlayerFeeCents(data.playerTwoType);
 
     const verification = await verifyEmails([data.playerOneEmail, data.playerTwoEmail]);
 
@@ -34,11 +43,15 @@ export async function POST(request: Request) {
       teamName: data.teamName.trim(),
       playerOneName: data.playerOneName.trim(),
       playerOneEmail: data.playerOneEmail.toLowerCase(),
+      playerOneType: data.playerOneType,
       playerTwoName: data.playerTwoName.trim(),
       playerTwoEmail: data.playerTwoEmail.toLowerCase(),
+      playerTwoType: data.playerTwoType,
       passwordHash: hashPassword(data.password),
       verificationStatus: JSON.stringify(verification.results),
-      amountCents,
+      amountCents: playerOneFeeCents + playerTwoFeeCents,
+      playerOneFeeCents,
+      playerTwoFeeCents,
       isWaitlist,
       accessToken: createAccessToken()
     });

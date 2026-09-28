@@ -13,8 +13,10 @@ export const signupSchema = z
     teamName: z.string().trim().min(3).max(40),
     playerOneName: z.string().trim().min(2).max(40),
     playerOneEmail: uvaEmail,
+    playerOneType: z.enum(["social", "general"]),
     playerTwoName: z.string().trim().min(2).max(40),
     playerTwoEmail: uvaEmail,
+    playerTwoType: z.enum(["social", "general"]),
     password: z.string().min(6, "Use a password with at least 6 characters.").max(72)
   })
   .refine((value) => value.playerOneEmail.toLowerCase() !== value.playerTwoEmail.toLowerCase(), {

@@ -10,15 +10,19 @@ const initialState = {
   teamName: "",
   playerOneName: "",
   playerOneEmail: "",
+  playerOneType: "general",
   playerTwoName: "",
   playerTwoEmail: "",
+  playerTwoType: "general",
   password: ""
 };
 
 export function SignupForm({
-  isWaitlistMode = false
+  isWaitlistMode = false,
+  isSocialDiscountActive = true
 }: {
   isWaitlistMode?: boolean;
+  isSocialDiscountActive?: boolean;
 }) {
   const [form, setForm] = useState(initialState);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +124,18 @@ export function SignupForm({
             {fieldErrors.playerOneEmail ? (
               <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerOneEmail}</p>
             ) : null}
+            <label className="block text-sm font-medium text-foreground" htmlFor="playerOneType">
+              Membership type
+            </label>
+            <select
+              className="h-11 w-full rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+              id="playerOneType"
+              value={form.playerOneType}
+              onChange={(event) => updateField("playerOneType", event.target.value)}
+            >
+              <option value="general">General — $15/player</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 4" : "$15/player"}</option>
+            </select>
           </div>
         </div>
 
@@ -154,6 +170,18 @@ export function SignupForm({
             {fieldErrors.playerTwoEmail ? (
               <p className="text-sm text-[hsl(18_88%_45%)]">{fieldErrors.playerTwoEmail}</p>
             ) : null}
+            <label className="block text-sm font-medium text-foreground" htmlFor="playerTwoType">
+              Membership type
+            </label>
+            <select
+              className="h-11 w-full rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+              id="playerTwoType"
+              value={form.playerTwoType}
+              onChange={(event) => updateField("playerTwoType", event.target.value)}
+            >
+              <option value="general">General — $15/player</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 4" : "$15/player"}</option>
+            </select>
           </div>
         </div>
 
@@ -182,11 +210,10 @@ export function SignupForm({
             </>
           ) : (
             <>
-              <p>
-                After registering, Venmo $40 to @theleague_uva and include your team name in the
-                memo.
-              </p>
-              <p className="mt-2">Your registration is confirmed once payment is received.</p>
+              <p>Choose Social or General for each player. Social status is verified against the Social roster.</p>
+              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 4, Social Team players pay $5 and General Team players pay $15; each team must include at least one Social Team player. After Oct 4, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
+              <p className="mt-2">After registering, pay through the <a className="font-semibold text-primary underline" href="https://square.link/u/0MjJczgc" rel="noreferrer" target="_blank">Square payment link</a>.</p>
+              <p className="mt-2">Your registration is confirmed once payment from both players is received.</p>
             </>
           )}
         </div>

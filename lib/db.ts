@@ -13,6 +13,8 @@ import {
   type SlotTeam
 } from "@/lib/league-schedule";
 import { recurringSlots } from "@/lib/slots";
+import { ACTIVE_SEASON_ID } from "@/lib/seasons";
+import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
 
 if (!env.databaseUrl) {
   throw new Error("Missing DATABASE_URL. Supabase/Postgres is required for this deployment.");
@@ -43,6 +45,40 @@ let bootstrapPromise: Promise<void> | undefined;
 async function ensureBootstrap() {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS league_seasons (
+          id text PRIMARY KEY,
+          name text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO league_seasons (id, name)
+        VALUES ('spring-2026', 'Spring 2026'), ('fall-2026', 'Fall 2026')
+        ON CONFLICT (id) DO NOTHING
+      `);
+      await pool.query(`
+        ALTER TABLE teams ADD COLUMN IF NOT EXISTS season_id text
+      `);
+      await pool.query(`
+        UPDATE teams SET season_id = 'spring-2026' WHERE season_id IS NULL
+      `);
+      await pool.query(`
+        ALTER TABLE teams ALTER COLUMN season_id SET DEFAULT 'fall-2026'
+      `);
+      await pool.query(`
+        ALTER TABLE teams ALTER COLUMN season_id SET NOT NULL
+      `);
+      await pool.query(`
+        ALTER TABLE teams ADD CONSTRAINT teams_season_id_fkey
+        FOREIGN KEY (season_id) REFERENCES league_seasons(id) NOT VALID
+      `).catch((error: { code?: string }) => {
+        if (error.code !== "42710") throw error;
+      });
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_teams_season_id ON teams (season_id)
+      `);
+
       await pool.query(`
         CREATE TABLE IF NOT EXISTS admin_sessions (
           token_hash text PRIMARY KEY,
@@ -313,6 +349,11 @@ async function ensureBootstrap() {
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await pool.query(`
+        UPDATE playoff_game_results
+        SET matchup_id = 'spring-2026:' || matchup_id
+        WHERE position(':' in matchup_id) = 0
+      `);
 
       await pool.query(`
         CREATE INDEX IF NOT EXISTS idx_playoff_game_results_winner_team_id
@@ -323,6 +364,14 @@ async function ensureBootstrap() {
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS is_waitlist boolean NOT NULL DEFAULT false
       `);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_one_type text NOT NULL DEFAULT 'general'`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_two_type text NOT NULL DEFAULT 'general'`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_one_fee_cents integer`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS player_two_fee_cents integer`);
+      await pool.query(`UPDATE teams SET player_one_fee_cents = amount_cents / 2 WHERE player_one_fee_cents IS NULL`);
+      await pool.query(`UPDATE teams SET player_two_fee_cents = amount_cents / 2 WHERE player_two_fee_cents IS NULL`);
+      await pool.query(`ALTER TABLE teams ALTER COLUMN player_one_fee_cents SET NOT NULL`);
+      await pool.query(`ALTER TABLE teams ALTER COLUMN player_two_fee_cents SET NOT NULL`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS email_list_signups (
@@ -334,12 +383,23 @@ async function ensureBootstrap() {
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS playoff_seed_overrides (
-          seed integer PRIMARY KEY,
+          season_id text NOT NULL DEFAULT 'spring-2026',
+          seed integer NOT NULL,
           team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
           created_at timestamptz NOT NULL DEFAULT now(),
-          updated_at timestamptz NOT NULL DEFAULT now()
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (season_id, seed)
         )
       `);
+
+      await pool.query(`ALTER TABLE playoff_seed_overrides ADD COLUMN IF NOT EXISTS season_id text`);
+      await pool.query(`UPDATE playoff_seed_overrides SET season_id = 'spring-2026' WHERE season_id IS NULL`);
+      await pool.query(`ALTER TABLE playoff_seed_overrides ALTER COLUMN season_id SET DEFAULT 'spring-2026'`);
+      await pool.query(`ALTER TABLE playoff_seed_overrides ALTER COLUMN season_id SET NOT NULL`);
+      await pool.query(`ALTER TABLE playoff_seed_overrides DROP CONSTRAINT IF EXISTS playoff_seed_overrides_pkey`);
+      await pool.query(`ALTER TABLE playoff_seed_overrides ADD PRIMARY KEY (season_id, seed)`).catch((error: { code?: string }) => {
+        if (error.code !== "42P16") throw error;
+      });
 
       await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_playoff_seed_overrides_team_id
@@ -381,6 +441,7 @@ async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>) {
 
 export type TeamRecord = {
   id: string;
+  season_id: string;
   team_name: string;
   player_one_name: string;
   player_one_email: string;
@@ -390,6 +451,10 @@ export type TeamRecord = {
   verification_status: unknown;
   payment_status: "pending" | "approved";
   amount_cents: number;
+  player_one_type: "social" | "general";
+  player_two_type: "social" | "general";
+  player_one_fee_cents: number;
+  player_two_fee_cents: number;
   is_waitlist: boolean;
   access_token: string | null;
   created_at: string;
@@ -401,11 +466,15 @@ export type CreateTeamInput = {
   teamName: string;
   playerOneName: string;
   playerOneEmail: string;
+  playerOneType: "social" | "general";
   playerTwoName: string;
   playerTwoEmail: string;
+  playerTwoType: "social" | "general";
   passwordHash: string;
   verificationStatus: string;
   amountCents?: number;
+  playerOneFeeCents: number;
+  playerTwoFeeCents: number;
   isWaitlist?: boolean;
   accessToken: string;
 };
@@ -432,6 +501,8 @@ export type SlotRecord = {
   day_key: string;
   day_label: string;
   time_label: string;
+  time_window_label: string;
+  location_label: string;
   sort_order: number;
   capacity: number;
   reserved_count: number;
@@ -556,6 +627,8 @@ function normalizeTeam(row: TeamRecord): TeamRecord {
   return {
     ...row,
     amount_cents: Number(row.amount_cents),
+    player_one_fee_cents: Number(row.player_one_fee_cents),
+    player_two_fee_cents: Number(row.player_two_fee_cents),
     is_waitlist: Boolean(row.is_waitlist)
   };
 }
@@ -566,7 +639,7 @@ function hydrateReservation<T extends ReservationRecord>(reservation: T) {
   return {
     ...reservation,
     day_label: slot?.dayLabel,
-    time_label: slot?.timeLabel,
+    time_label: slot?.timeWindowLabel ?? slot?.timeLabel,
     capacity: slot?.capacity
   };
 }
@@ -627,10 +700,18 @@ export async function isAdminLoginRateLimited() {
 }
 
 export async function createTeam(input: CreateTeamInput) {
-  const rows = await query<TeamRecord>(
-    `
+  const rows = await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [ACTIVE_SEASON_ID]);
+    const countResult = await client.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1",
+      [ACTIVE_SEASON_ID]
+    );
+    const isWaitlist = Boolean(input.isWaitlist) || Number(countResult.rows[0]?.count || 0) >= 24;
+    const result = await client.query<TeamRecord>(
+      `
       INSERT INTO teams (
         id,
+        season_id,
         team_name,
         player_one_name,
         player_one_email,
@@ -640,49 +721,60 @@ export async function createTeam(input: CreateTeamInput) {
         verification_status,
         payment_status,
         amount_cents,
+        player_one_type,
+        player_two_type,
+        player_one_fee_cents,
+        player_two_fee_cents,
         is_waitlist,
         access_token,
         created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'pending', $9, $10, $11, now()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'pending', $10, $11, $12, $13, $14, $15, $16, now()
       )
       RETURNING *
-    `,
-    [
-      input.id,
-      input.teamName,
-      input.playerOneName,
-      input.playerOneEmail,
-      input.playerTwoName,
-      input.playerTwoEmail,
-      input.passwordHash,
-      input.verificationStatus,
-      input.amountCents ?? 4000,
-      input.isWaitlist ?? false,
-      input.accessToken
-    ]
-  );
+      `,
+      [
+        input.id,
+        ACTIVE_SEASON_ID,
+        input.teamName,
+        input.playerOneName,
+        input.playerOneEmail,
+        input.playerTwoName,
+        input.playerTwoEmail,
+        input.passwordHash,
+        input.verificationStatus,
+        input.amountCents ?? input.playerOneFeeCents + input.playerTwoFeeCents,
+        input.playerOneType,
+        input.playerTwoType,
+        input.playerOneFeeCents,
+        input.playerTwoFeeCents,
+        isWaitlist,
+        input.accessToken
+      ]
+    );
+    return result.rows;
+  });
 
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
 export async function getTeamById(id: string) {
-  const rows = await query<TeamRecord>("SELECT * FROM teams WHERE id = $1 LIMIT 1", [id]);
+  const rows = await query<TeamRecord>("SELECT * FROM teams WHERE id = $1 AND season_id = $2 LIMIT 1", [id, ACTIVE_SEASON_ID]);
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
 export async function getTeamByName(teamName: string) {
   const rows = await query<TeamRecord>(
-    "SELECT * FROM teams WHERE lower(team_name) = lower($1) LIMIT 1",
-    [teamName]
+    "SELECT * FROM teams WHERE lower(team_name) = lower($1) AND season_id = $2 LIMIT 1",
+    [teamName, ACTIVE_SEASON_ID]
   );
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
 export async function getTeamByAccessToken(accessToken: string) {
   const rows = await query<TeamRecord>(
-    "SELECT * FROM teams WHERE access_token = $1 LIMIT 1",
-    [accessToken]
+    "SELECT * FROM teams WHERE access_token = $1 AND season_id = $2 LIMIT 1",
+    [accessToken, ACTIVE_SEASON_ID]
   );
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
@@ -693,11 +785,12 @@ export async function getTeamByMemberEmail(email: string) {
     `
       SELECT *
       FROM teams
-      WHERE lower(player_one_email) = lower($1)
-         OR lower(player_two_email) = lower($1)
+      WHERE (lower(player_one_email) = lower($1)
+         OR lower(player_two_email) = lower($1))
+        AND season_id = $2
       LIMIT 1
     `,
-    [normalizedEmail]
+    [normalizedEmail, ACTIVE_SEASON_ID]
   );
 
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
@@ -712,21 +805,23 @@ export async function getExistingConflict(input: {
     `
       SELECT *
       FROM teams
-      WHERE team_name = $1
+      WHERE season_id = $4 AND (
+        team_name = $1
         OR player_one_email IN ($2, $3)
         OR player_two_email IN ($2, $3)
         OR player_one_email = $3
         OR player_two_email = $2
+      )
       LIMIT 1
     `,
-    [input.teamName, input.playerOneEmail, input.playerTwoEmail]
+    [input.teamName, input.playerOneEmail, input.playerTwoEmail, ACTIVE_SEASON_ID]
   );
 
   return rows[0] ? normalizeTeam(rows[0]) : undefined;
 }
 
 export async function listTeams() {
-  const rows = await query<TeamRecord>("SELECT * FROM teams ORDER BY created_at DESC");
+  const rows = await query<TeamRecord>("SELECT * FROM teams WHERE season_id = $1 ORDER BY created_at DESC", [ACTIVE_SEASON_ID]);
   return rows.map(normalizeTeam);
 }
 
@@ -737,13 +832,15 @@ export async function listTeamsWithReservations() {
       SELECT *
       FROM reservations
       WHERE status IN ('pending', 'approved')
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $1)
       ORDER BY
         CASE status
           WHEN 'pending' THEN 0
           ELSE 1
         END,
         updated_at DESC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 
   const reservationMap = new Map<string, ReservationRecord>();
@@ -762,7 +859,7 @@ export async function listTeamsWithReservations() {
       ...team,
       active_slot_id: reservation?.slot_id ?? null,
       active_day_label: slot?.dayLabel ?? null,
-      active_time_label: slot?.timeLabel ?? null,
+      active_time_label: slot?.timeWindowLabel ?? slot?.timeLabel ?? null,
       active_reservation_status: reservation?.status ?? null
     } satisfies AdminTeamRow;
   });
@@ -773,22 +870,24 @@ export async function listPlayoffSeedOverrides() {
     `
       SELECT seed, team_id, created_at, updated_at
       FROM playoff_seed_overrides
+      WHERE season_id = $1
       ORDER BY seed ASC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 }
 
 export async function savePlayoffSeedOverrides(overrides: Array<{ seed: number; teamId: string }>) {
   await withTransaction(async (client) => {
-    await client.query("DELETE FROM playoff_seed_overrides");
+    await client.query("DELETE FROM playoff_seed_overrides WHERE season_id = $1", [ACTIVE_SEASON_ID]);
 
     for (const override of overrides) {
       await client.query(
         `
-          INSERT INTO playoff_seed_overrides (seed, team_id, created_at, updated_at)
-          VALUES ($1, $2, now(), now())
+          INSERT INTO playoff_seed_overrides (season_id, seed, team_id, created_at, updated_at)
+          VALUES ($1, $2, $3, now(), now())
         `,
-        [override.seed, override.teamId]
+        [ACTIVE_SEASON_ID, override.seed, override.teamId]
       );
     }
   });
@@ -797,10 +896,12 @@ export async function savePlayoffSeedOverrides(overrides: Array<{ seed: number; 
 export async function listPlayoffGameResults() {
   return query<PlayoffGameResultRecord>(
     `
-      SELECT matchup_id, winner_team_id, created_at, updated_at
+      SELECT substring(matchup_id from length($1) + 2) AS matchup_id, winner_team_id, created_at, updated_at
       FROM playoff_game_results
+      WHERE matchup_id LIKE $2
       ORDER BY created_at ASC
-    `
+    `,
+    [ACTIVE_SEASON_ID, `${ACTIVE_SEASON_ID}:%`]
   );
 }
 
@@ -809,7 +910,7 @@ export async function savePlayoffGameResult(input: {
   winnerTeamId: string | null;
 }) {
   if (!input.winnerTeamId) {
-    await query("DELETE FROM playoff_game_results WHERE matchup_id = $1", [input.matchupId]);
+    await query("DELETE FROM playoff_game_results WHERE matchup_id = $1", [`${ACTIVE_SEASON_ID}:${input.matchupId}`]);
     return;
   }
 
@@ -822,7 +923,7 @@ export async function savePlayoffGameResult(input: {
         winner_team_id = EXCLUDED.winner_team_id,
         updated_at = now()
     `,
-    [input.matchupId, input.winnerTeamId]
+    [`${ACTIVE_SEASON_ID}:${input.matchupId}`, input.winnerTeamId]
   );
 }
 
@@ -940,6 +1041,8 @@ export async function createTeamByAdmin(input: {
   playerOneEmail: string;
   playerTwoName: string;
   playerTwoEmail: string;
+  playerOneType: PlayerType;
+  playerTwoType: PlayerType;
   passwordHash: string;
   paymentStatus: TeamRecord["payment_status"];
   amountCents?: number;
@@ -949,6 +1052,7 @@ export async function createTeamByAdmin(input: {
     `
       INSERT INTO teams (
         id,
+        season_id,
         team_name,
         player_one_name,
         player_one_email,
@@ -958,16 +1062,21 @@ export async function createTeamByAdmin(input: {
         verification_status,
         payment_status,
         amount_cents,
+        player_one_type,
+        player_two_type,
+        player_one_fee_cents,
+        player_two_fee_cents,
         access_token,
         created_at,
         paid_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, '[]'::jsonb, $8, $9, $10, now(),
-        CASE WHEN $8 = 'approved' THEN now() ELSE NULL END
+        $1, $2, $3, $4, $5, $6, $7, $8, '[]'::jsonb, $9, $10, $11, $12, $13, $14, $15, now(),
+        CASE WHEN $9 = 'approved' THEN now() ELSE NULL END
       )
     `,
     [
       input.id,
+      ACTIVE_SEASON_ID,
       input.teamName,
       input.playerOneName,
       input.playerOneEmail,
@@ -975,7 +1084,11 @@ export async function createTeamByAdmin(input: {
       input.playerTwoEmail,
       input.passwordHash,
       input.paymentStatus,
-      input.amountCents ?? 4000,
+      input.amountCents ?? getPlayerFeeCents(input.playerOneType) + getPlayerFeeCents(input.playerTwoType),
+      input.playerOneType,
+      input.playerTwoType,
+      getPlayerFeeCents(input.playerOneType),
+      getPlayerFeeCents(input.playerTwoType),
       input.accessToken
     ]
   );
@@ -986,8 +1099,10 @@ export async function updateTeamByAdmin(input: {
   teamName: string;
   playerOneName: string;
   playerOneEmail: string;
+  playerOneType: PlayerType;
   playerTwoName: string;
   playerTwoEmail: string;
+  playerTwoType: PlayerType;
   paymentStatus: TeamRecord["payment_status"];
   passwordHash?: string;
 }) {
@@ -1004,12 +1119,17 @@ export async function updateTeamByAdmin(input: {
         team_name = $2,
         player_one_name = $3,
         player_one_email = $4,
-        player_two_name = $5,
-        player_two_email = $6,
-        password_hash = $7,
-        payment_status = $8,
+        player_one_type = $5,
+        player_two_name = $6,
+        player_two_email = $7,
+        player_two_type = $8,
+        password_hash = $9,
+        payment_status = $10,
+        amount_cents = $11,
+        player_one_fee_cents = $12,
+        player_two_fee_cents = $13,
         paid_at = CASE
-          WHEN $8 = 'approved' THEN COALESCE(paid_at, now())
+          WHEN $10 = 'approved' THEN COALESCE(paid_at, now())
           ELSE NULL
         END
       WHERE id = $1
@@ -1019,10 +1139,16 @@ export async function updateTeamByAdmin(input: {
       input.teamName,
       input.playerOneName,
       input.playerOneEmail,
+      input.playerOneType,
       input.playerTwoName,
       input.playerTwoEmail,
+      input.playerTwoType,
       input.passwordHash || currentTeam.password_hash,
-      input.paymentStatus
+      input.paymentStatus,
+      getPlayerFeeCents(input.playerOneType, new Date(currentTeam.created_at)) +
+        getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at)),
+      getPlayerFeeCents(input.playerOneType, new Date(currentTeam.created_at)),
+      getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at))
     ]
   );
 }
@@ -1039,9 +1165,10 @@ export async function listApprovedTeamsForSlot(slotId: string) {
       JOIN teams t ON t.id = r.team_id
       WHERE r.slot_id = $1
         AND r.status = 'approved'
+        AND t.season_id = $2
       ORDER BY t.team_name ASC
     `,
-    [slotId]
+    [slotId, ACTIVE_SEASON_ID]
   );
 }
 
@@ -1053,9 +1180,10 @@ async function listApprovedSlotTeamsDetailed(slotId: string) {
       JOIN teams t ON t.id = r.team_id
       WHERE r.slot_id = $1
         AND r.status = 'approved'
+        AND t.season_id = $2
       ORDER BY t.team_name ASC
     `,
-    [slotId]
+    [slotId, ACTIVE_SEASON_ID]
   );
 }
 
@@ -1064,8 +1192,10 @@ async function listGameResults() {
     `
       SELECT *
       FROM game_results
+      WHERE home_team_id IN (SELECT id FROM teams WHERE season_id = $1)
       ORDER BY slot_id ASC, week ASC, match_date ASC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 }
 
@@ -1074,8 +1204,10 @@ async function listGameResultSubmissions() {
     `
       SELECT *
       FROM game_result_submissions
+      WHERE home_team_id IN (SELECT id FROM teams WHERE season_id = $1)
       ORDER BY slot_id ASC, week ASC, updated_at DESC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 }
 
@@ -1100,8 +1232,10 @@ async function listStoredLeagueGames() {
       FROM league_games g
       JOIN teams home ON home.id = g.home_team_id
       JOIN teams away ON away.id = g.away_team_id
+      WHERE home.season_id = $1 AND away.season_id = $1
       ORDER BY g.match_date ASC, g.time_label ASC, g.slot_id ASC, g.week ASC, home.team_name ASC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 }
 
@@ -1123,7 +1257,10 @@ async function syncLeagueGames() {
   const generatedGames = slotGames.flat();
 
   await withTransaction(async (client) => {
-    await client.query("TRUNCATE TABLE league_games");
+    await client.query(
+      "DELETE FROM league_games WHERE home_team_id IN (SELECT id FROM teams WHERE season_id = $1)",
+      [ACTIVE_SEASON_ID]
+    );
 
     for (const game of generatedGames) {
       await client.query(
@@ -1219,8 +1356,10 @@ export async function listSlots() {
       SELECT slot_id, COUNT(*)::text AS count
       FROM reservations
       WHERE status = 'approved'
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $1)
       GROUP BY slot_id
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 
   const countMap = new Map(counts.map((row) => [row.slot_id, Number(row.count)]));
@@ -1241,6 +1380,8 @@ export async function listSlots() {
       day_key: slot.dayKey,
       day_label: slot.dayLabel,
       time_label: slot.timeLabel,
+      time_window_label: slot.timeWindowLabel,
+      location_label: slot.locationLabel,
       sort_order: slot.sortOrder,
       capacity: slot.capacity,
       reserved_count: reservedCount,
@@ -1505,8 +1646,8 @@ export function getSlotById(slotId: string) {
 
 export async function getReservationById(id: string) {
   const rows = await query<ReservationRecord>(
-    "SELECT * FROM reservations WHERE id = $1 LIMIT 1",
-    [id]
+    "SELECT * FROM reservations WHERE id = $1 AND team_id IN (SELECT id FROM teams WHERE season_id = $2) LIMIT 1",
+    [id, ACTIVE_SEASON_ID]
   );
   return rows[0];
 }
@@ -1570,7 +1711,9 @@ export async function getReservationStats() {
       SELECT COUNT(*)::text AS count
       FROM reservations
       WHERE status = 'approved'
-    `
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $1)
+    `,
+    [ACTIVE_SEASON_ID]
   );
 
   const totalReservations = Number(rows[0]?.count || 0);
@@ -1616,8 +1759,9 @@ export async function reserveSlot(input: { id: string; teamId: string; slotId: s
       FROM reservations
       WHERE slot_id = $1
         AND status = 'approved'
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $2)
     `,
-    [input.slotId]
+    [input.slotId, ACTIVE_SEASON_ID]
   );
 
   if (Number(countRows[0]?.count || 0) >= slot.capacity) {
@@ -1711,8 +1855,9 @@ export async function moveTeamReservation(teamId: string, slotId: string | null)
       WHERE slot_id = $1
         AND status = 'approved'
         AND team_id != $2
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $3)
     `,
-    [slotId, teamId]
+    [slotId, teamId, ACTIVE_SEASON_ID]
   );
 
   if (Number(countRows[0]?.count || 0) >= slot.capacity) {
@@ -1759,6 +1904,7 @@ export async function listAllReservations() {
       SELECT r.*, t.team_name
       FROM reservations r
       JOIN teams t ON t.id = r.team_id
+      WHERE t.season_id = $1
       ORDER BY
         CASE r.status
           WHEN 'pending' THEN 0
@@ -1766,7 +1912,8 @@ export async function listAllReservations() {
           ELSE 2
         END,
         r.updated_at DESC
-    `
+    `,
+    [ACTIVE_SEASON_ID]
   );
 
   return rows.map(hydrateReservation);
@@ -1792,8 +1939,9 @@ export async function approveReservation(reservationId: string) {
       WHERE slot_id = $1
         AND status = 'approved'
         AND id != $2
+        AND team_id IN (SELECT id FROM teams WHERE season_id = $3)
     `,
-    [reservation.slot_id, reservationId]
+    [reservation.slot_id, reservationId, ACTIVE_SEASON_ID]
   );
 
   if (Number(countRows[0]?.count || 0) >= slot.capacity) {
