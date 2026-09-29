@@ -14,21 +14,26 @@ export default async function HomePage() {
   const socialDiscountActive = isSocialDiscountActive();
   let slots: SlotRecord[] = [];
   let registeredTeamCount = 0;
+  let registrationCount = 0;
 
   try {
     slots = await listSlots();
     const teams = await listTeams();
-    registeredTeamCount = teams.length;
+    const activeTeams = teams.filter((team) => !team.is_waitlist);
+    registeredTeamCount = activeTeams.filter((team) => team.payment_status === "approved").length;
+    registrationCount = activeTeams.length;
   } catch {
     // Leave the public marketing page available even if the database is temporarily unavailable.
     slots = [];
     registeredTeamCount = 0;
+    registrationCount = 0;
   }
 
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const heroCapacity = totalCapacity || 24;
   const heroFillPercent = Math.min((registeredTeamCount / heroCapacity) * 100, 100);
-  const leagueIsFull = registeredTeamCount >= heroCapacity;
+  const leagueIsFull = registrationCount >= heroCapacity;
+  const openRegistrationSpots = Math.max(heroCapacity - registrationCount, 0);
 
   return (
     <main className="relative overflow-hidden">
@@ -121,8 +126,8 @@ export default async function HomePage() {
                       {heroFillPercent.toFixed(0)}% full
                     </p>
                     <p className="text-muted-foreground">
-                      {heroCapacity - registeredTeamCount > 0
-                        ? `${heroCapacity - registeredTeamCount} spots still open`
+                      {openRegistrationSpots > 0
+                        ? `${openRegistrationSpots} spots still open`
                         : "The league is currently full"}
                     </p>
                   </div>
