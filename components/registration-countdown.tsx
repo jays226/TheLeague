@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const deadline = new Date("2026-10-06T00:00:00-04:00").getTime();
+const deadline = new Date("2026-10-07T00:00:00-04:00").getTime();
 
 function getTimeLeft() {
   const diff = Math.max(deadline - Date.now(), 0);
@@ -44,10 +44,10 @@ export function RegistrationCountdown() {
   return (
     <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-white/70 bg-white/72 px-4 py-4 text-center shadow-soft backdrop-blur sm:px-5">
       <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/65 sm:text-xs sm:tracking-[0.16em]">
-        Social pricing ends Monday, October 5, 2026 at 11:59 PM EDT
+        Social pricing ends Tuesday, October 6, 2026 at 11:59 PM EDT
       </p>
       <p className="mt-2 text-center text-sm font-medium text-foreground">
-        Each team must include at least one Social Team player until Oct 5.
+        Each team must include at least one Social Team player until Oct 6.
       </p>
       <div className="mt-3 grid grid-cols-4 gap-2 sm:gap-3">
         {[

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     await ensureNoExistingTeam(data);
     if (isSocialDiscountActive() && data.playerOneType !== "social" && data.playerTwoType !== "social") {
       return NextResponse.json(
-        { error: "At least one team member must be designated as a Social Team player through October 5." },
+        { error: "At least one team member must be designated as a Social Team player through October 6." },
         { status: 400 }
       );
     }

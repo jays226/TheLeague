@@ -153,7 +153,7 @@ export function SignupForm({
               onChange={(event) => updateField("playerOneType", event.target.value)}
             >
               <option value="general">Non-Social Team — $15/player</option>
-              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 6" : "$15/player"}</option>
             </select>
           </div>
         </div>
@@ -212,7 +212,7 @@ export function SignupForm({
               onChange={(event) => updateField("playerTwoType", event.target.value)}
             >
               <option value="general">Non-Social Team — $15/player</option>
-              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 5" : "$15/player"}</option>
+              <option value="social">Social — {isSocialDiscountActive ? "$5/player through Oct 6" : "$15/player"}</option>
             </select>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function SignupForm({
           ) : (
             <>
               <p>Choose Social Team or Non-Social Team for each player. Social status is verified against the Social roster. Enter each player&apos;s DUPR ID so match results can be recorded.</p>
-              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 5, Social Team players pay $5 and Non-Social Team players pay $15; each team must include at least one Social Team player. After Oct 5, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
+              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 6, Social Team players pay $5 and Non-Social Team players pay $15; each team must include at least one Social Team player. After Oct 6, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
               <p className="mt-2">
                 After registering, each player pays their own fee. {isSocialDiscountActive ? <>
                   Social Team players use the <a className="font-semibold text-primary underline" href={socialSquareLink} rel="noreferrer" target="_blank">Social Team payment link</a>; Non-Social Team players use the {" "}
