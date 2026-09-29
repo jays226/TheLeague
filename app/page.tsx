@@ -187,7 +187,7 @@ export default async function HomePage() {
                       Prize money
                     </p>
                     <p className="mt-3 text-lg font-semibold text-foreground">
-                      1st place: $250 · 2nd place: $100 · 3rd place: $50
+                      1st place: $50 · 2nd place: $150 · 3rd place: $100
                     </p>
                   </div>
                   <div className="rounded-3xl bg-white/82 p-5 shadow-soft">

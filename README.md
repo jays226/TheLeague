@@ -55,7 +55,7 @@ You still need to provide:
 - Social Team players pay $5 per player through October 5; Non-Social Team players pay $15. After October 5, all players pay $15. Teams registering through October 5 need at least one Social Team player, verified against the Social roster.
 - Each player must provide a DUPR ID at signup so results can be recorded in DUPR.
 - Fall 2026 is capped at 24 teams across six weekly slots, with capacity for 4 teams per slot.
-- Playoff prizes: $250 for 1st place, $100 for 2nd, and $50 for 3rd.
+- Playoff prizes: $50 for 1st place, $150 for 2nd, and $100 for 3rd.
 - Social pricing ends Monday, October 5, 2026 at 11:59 PM EDT.
 - Every slot has capacity for 4 teams.
 - Each team can have one active reservation at a time; switching slots automatically replaces the old one.
