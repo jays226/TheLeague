@@ -128,7 +128,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-                  A UVA pickleball league with weekly matches from October 12 through November 4 and a playoff tournament on Sunday, November 8.
+                  A UVA pickleball league with weekly matches from <strong>October 12</strong> through <strong>November 4</strong> and a playoff tournament on <strong>Sunday, November 8</strong>.
                 </p>
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
