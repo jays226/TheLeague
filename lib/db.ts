@@ -1146,8 +1146,8 @@ export async function updateTeamByAdmin(input: {
         amount_cents = $11,
         player_one_fee_cents = $12,
         player_two_fee_cents = $13,
-        player_one_dupr_id = COALESCE($14, player_one_dupr_id),
-        player_two_dupr_id = COALESCE($15, player_two_dupr_id),
+        player_one_dupr_id = $14::text,
+        player_two_dupr_id = $15::text,
         paid_at = CASE
           WHEN $10 = 'approved' THEN COALESCE(paid_at, now())
           ELSE NULL
@@ -1169,8 +1169,8 @@ export async function updateTeamByAdmin(input: {
         getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at)),
       getPlayerFeeCents(input.playerOneType, new Date(currentTeam.created_at)),
       getPlayerFeeCents(input.playerTwoType, new Date(currentTeam.created_at)),
-      input.playerOneDuprId ?? null,
-      input.playerTwoDuprId ?? null
+      input.playerOneDuprId ?? currentTeam.player_one_dupr_id ?? "",
+      input.playerTwoDuprId ?? currentTeam.player_two_dupr_id ?? ""
     ]
   );
 }
