@@ -6,7 +6,8 @@ import { formatCurrency } from "@/lib/utils";
 
 const adminRecipients = [
   "bmt7uk@virginia.edu",
-  "ysf6mf@virginia.edu"
+  "ysf6mf@virginia.edu",
+  "ddq3dv@virginia.edu"
 ];
 const auditBccRecipient = "bmt7uk@virginia.edu";
 
