@@ -33,7 +33,7 @@ export default async function HomePage() {
   const heroCapacity = totalCapacity || 24;
   const heroFillPercent = Math.min((registeredTeamCount / heroCapacity) * 100, 100);
   const leagueIsFull = registrationCount >= heroCapacity;
-  const openRegistrationSpots = Math.max(heroCapacity - registrationCount, 0);
+  const openRegistrationSpots = Math.max(heroCapacity - registeredTeamCount, 0);
 
   return (
     <main className="relative overflow-hidden">
