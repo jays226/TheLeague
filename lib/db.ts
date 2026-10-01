@@ -1142,14 +1142,14 @@ export async function updateTeamByAdmin(input: {
         player_two_email = $7,
         player_two_type = $8,
         password_hash = $9,
-        payment_status = $10,
+        payment_status = $10::payment_status_enum,
         amount_cents = $11,
         player_one_fee_cents = $12,
         player_two_fee_cents = $13,
         player_one_dupr_id = $14::text,
         player_two_dupr_id = $15::text,
         paid_at = CASE
-          WHEN $10 = 'approved' THEN COALESCE(paid_at, now())
+          WHEN $10::payment_status_enum = 'approved'::payment_status_enum THEN COALESCE(paid_at, now())
           ELSE NULL
         END
       WHERE id = $1
