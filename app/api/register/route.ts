@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { hashPassword } from "@/lib/auth";
-import { createTeam, listTeams } from "@/lib/db";
+import { createTeam } from "@/lib/db";
 import { sendAdminSignupAlert, sendWelcomeRegistrationEmail } from "@/lib/email-notifications";
 import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
@@ -22,8 +22,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const registeredTeams = await listTeams();
-    const isWaitlist = registeredTeams.length >= 24;
     const playerOneFeeCents = getPlayerFeeCents(data.playerOneType);
     const playerTwoFeeCents = getPlayerFeeCents(data.playerTwoType);
 
@@ -54,7 +52,7 @@ export async function POST(request: Request) {
       amountCents: playerOneFeeCents + playerTwoFeeCents,
       playerOneFeeCents,
       playerTwoFeeCents,
-      isWaitlist,
+      isWaitlist: false,
       accessToken: createAccessToken()
     });
 

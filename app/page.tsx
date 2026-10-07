@@ -14,25 +14,21 @@ export default async function HomePage() {
   const socialDiscountActive = isSocialDiscountActive();
   let slots: SlotRecord[] = [];
   let registeredTeamCount = 0;
-  let registrationCount = 0;
 
   try {
     slots = await listSlots();
     const teams = await listTeams();
-    const activeTeams = teams.filter((team) => !team.is_waitlist);
-    registeredTeamCount = activeTeams.filter((team) => team.payment_status === "approved").length;
-    registrationCount = activeTeams.length;
+    registeredTeamCount = teams.filter((team) => !team.is_waitlist && team.payment_status === "approved").length;
   } catch {
     // Leave the public marketing page available even if the database is temporarily unavailable.
     slots = [];
     registeredTeamCount = 0;
-    registrationCount = 0;
   }
 
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const heroCapacity = totalCapacity || 24;
   const heroFillPercent = Math.min((registeredTeamCount / heroCapacity) * 100, 100);
-  const leagueIsFull = registrationCount >= heroCapacity;
+  const leagueIsFull = registeredTeamCount >= heroCapacity;
   const openRegistrationSpots = Math.max(heroCapacity - registeredTeamCount, 0);
 
   return (

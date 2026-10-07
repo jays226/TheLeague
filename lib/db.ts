@@ -709,7 +709,7 @@ export async function createTeam(input: CreateTeamInput) {
   const rows = await withTransaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [ACTIVE_SEASON_ID]);
     const countResult = await client.query<{ count: string }>(
-      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1",
+      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
       [ACTIVE_SEASON_ID]
     );
     const isWaitlist = Boolean(input.isWaitlist) || Number(countResult.rows[0]?.count || 0) >= 24;
@@ -938,15 +938,30 @@ export async function savePlayoffGameResult(input: {
 }
 
 export async function approveTeamPayment(teamId: string) {
-  await query(
-    `
-      UPDATE teams
-      SET payment_status = 'approved',
-          paid_at = COALESCE(paid_at, now())
-      WHERE id = $1
-    `,
-    [teamId]
-  );
+  await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [ACTIVE_SEASON_ID]);
+    const teamResult = await client.query<Pick<TeamRecord, "id" | "season_id" | "payment_status" | "is_waitlist">>(
+      "SELECT id, season_id, payment_status, is_waitlist FROM teams WHERE id = $1 AND season_id = $2 FOR UPDATE",
+      [teamId, ACTIVE_SEASON_ID]
+    );
+    const team = teamResult.rows[0];
+    if (!team) throw new Error("Team not found in the active season.");
+    if (team.payment_status === "approved") return;
+    if (team.is_waitlist) throw new Error("Move this team off the waitlist before approving payment.");
+
+    const countResult = await client.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
+      [ACTIVE_SEASON_ID]
+    );
+    if (Number(countResult.rows[0]?.count || 0) >= 24) {
+      throw new Error("The 24-team limit has been reached. Move a team to the waitlist before approving another payment.");
+    }
+
+    await client.query(
+      `UPDATE teams SET payment_status = 'approved', paid_at = COALESCE(paid_at, now()) WHERE id = $1 AND season_id = $2`,
+      [teamId, ACTIVE_SEASON_ID]
+    );
+  });
 }
 
 export async function setTeamWaitlistStatus(teamId: string, isWaitlist: boolean) {
