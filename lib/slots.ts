@@ -7,7 +7,7 @@ export const recurringSlots = [
     timeWindowLabel: "5:00 PM–5:45 PM",
     locationLabel: "Snyder Courts",
     sortOrder: 1,
-    capacity: 4
+    capacity: 6
   },
   {
     id: "monday-6",
@@ -17,7 +17,7 @@ export const recurringSlots = [
     timeWindowLabel: "6:00 PM–6:45 PM",
     locationLabel: "Perry Courts",
     sortOrder: 2,
-    capacity: 4
+    capacity: 6
   },
   {
     id: "tuesday-5",
@@ -27,7 +27,7 @@ export const recurringSlots = [
     timeWindowLabel: "5:00 PM–5:45 PM",
     locationLabel: "Snyder Courts",
     sortOrder: 3,
-    capacity: 4
+    capacity: 6
   },
   {
     id: "tuesday-6",
@@ -37,7 +37,7 @@ export const recurringSlots = [
     timeWindowLabel: "6:00 PM–6:45 PM",
     locationLabel: "Perry Courts",
     sortOrder: 4,
-    capacity: 4
+    capacity: 6
   },
   {
     id: "wednesday-5",
@@ -47,7 +47,7 @@ export const recurringSlots = [
     timeWindowLabel: "5:00 PM–5:45 PM",
     locationLabel: "Snyder Courts",
     sortOrder: 5,
-    capacity: 4
+    capacity: 6
   },
   {
     id: "wednesday-6",
@@ -57,6 +57,8 @@ export const recurringSlots = [
     timeWindowLabel: "6:00 PM–6:45 PM",
     locationLabel: "Perry Courts",
     sortOrder: 6,
-    capacity: 4
+    capacity: 6
   }
 ] as const;
+
+export const totalLeagueTeamCapacity = recurringSlots.reduce((total, slot) => total + slot.capacity, 0);

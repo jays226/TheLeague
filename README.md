@@ -54,10 +54,10 @@ You still need to provide:
 - Weekly slots are Monday through Wednesday, 5:00–5:45 PM at Snyder Courts and 6:00–6:45 PM at Perry Courts.
 - Social Team players pay $5 per player through October 7; Non-Social Team players pay $15. After October 7, all players pay $15. Teams registering through October 7 need at least one Social Team player, verified against the Social roster.
 - Each player must provide a DUPR ID at signup so results can be recorded in DUPR.
-- Fall 2026 is capped at 24 teams across six weekly slots, with capacity for 4 teams per slot.
+- Fall 2026 is capped at 36 teams across six weekly slots, with capacity for 6 teams per slot.
 - Playoff prizes: $50 for 1st place, $150 for 2nd, and $100 for 3rd.
 - Social pricing ends Wednesday, October 7, 2026 at 11:59 PM EDT.
-- Every slot has capacity for 4 teams.
+- Every slot has capacity for 6 teams.
 - Each team can have one active reservation at a time; switching slots automatically replaces the old one.
 - Every reservation starts as `pending` until an admin approves or rejects it.
 - The app expects `DATABASE_URL` to point at a hosted Postgres database such as Supabase.

@@ -12,7 +12,7 @@ import {
   type SlotStandings,
   type SlotTeam
 } from "@/lib/league-schedule";
-import { recurringSlots } from "@/lib/slots";
+import { recurringSlots, totalLeagueTeamCapacity } from "@/lib/slots";
 import { ACTIVE_SEASON_ID } from "@/lib/seasons";
 import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
 
@@ -712,7 +712,7 @@ export async function createTeam(input: CreateTeamInput) {
       "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
       [ACTIVE_SEASON_ID]
     );
-    const isWaitlist = Boolean(input.isWaitlist) || Number(countResult.rows[0]?.count || 0) >= 24;
+    const isWaitlist = Boolean(input.isWaitlist) || Number(countResult.rows[0]?.count || 0) >= totalLeagueTeamCapacity;
     const result = await client.query<TeamRecord>(
       `
       INSERT INTO teams (
@@ -953,8 +953,8 @@ export async function approveTeamPayment(teamId: string) {
       "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
       [ACTIVE_SEASON_ID]
     );
-    if (Number(countResult.rows[0]?.count || 0) >= 24) {
-      throw new Error("The 24-team limit has been reached. Move a team to the waitlist before approving another payment.");
+    if (Number(countResult.rows[0]?.count || 0) >= totalLeagueTeamCapacity) {
+      throw new Error(`The ${totalLeagueTeamCapacity}-team limit has been reached. Move a team to the waitlist before approving another payment.`);
     }
 
     await client.query(

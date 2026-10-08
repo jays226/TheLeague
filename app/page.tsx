@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { listSlots, listTeams, type SlotRecord } from "@/lib/db";
 import { env } from "@/lib/env";
 import { isSocialDiscountActive } from "@/lib/pricing";
+import { totalLeagueTeamCapacity } from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function HomePage() {
   }
 
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
-  const heroCapacity = totalCapacity || 24;
+  const heroCapacity = totalCapacity || totalLeagueTeamCapacity;
   const heroFillPercent = Math.min((registeredTeamCount / heroCapacity) * 100, 100);
   const leagueIsFull = registeredTeamCount >= heroCapacity;
   const openRegistrationSpots = Math.max(heroCapacity - registeredTeamCount, 0);
@@ -177,7 +178,7 @@ export default async function HomePage() {
                   <p>
                     The regular season runs October 12 through November 4, followed by the playoff tournament on November 8.
                   </p>
-                  <p>Social pricing ends October 7. The league is limited to 24 teams.</p>
+                  <p>Social pricing ends October 7. Each of the six weekly time slots can hold six teams, for 36 teams total.</p>
                 </div>
               </Card>
 
