@@ -114,6 +114,7 @@ export default async function AdminPage({
   const waitlistTeams = [...teams]
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const waitlistPlayerEmails = waitlistTeams.flatMap((team) => [team.player_one_email, team.player_two_email]).filter(Boolean);
   const participantEmails = [
     ...new Set(
       teams
@@ -492,28 +493,34 @@ export default async function AdminPage({
           </div>
 
           {waitlistTeams.length > 0 ? (
-            <div className="mt-5 grid gap-3">
-              {waitlistTeams.map((team, index) => (
-                <div
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 p-4"
-                  key={team.id}
-                >
-                  <div>
-                    <p className="text-base font-semibold text-foreground">
-                      #{index + 1} {team.team_name}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {team.player_one_email} • {team.player_two_email}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      DUPR IDs: {team.player_one_dupr_id || "Not provided"} • {team.player_two_dupr_id || "Not provided"}
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-2xl bg-white/80 p-4">
+                <p className="text-sm font-semibold text-foreground">Waitlisted player emails</p>
+                <p className="mt-2 break-all text-sm leading-6 text-muted-foreground">{waitlistPlayerEmails.join(", ")}</p>
+              </div>
+              <div className="grid gap-3">
+                {waitlistTeams.map((team, index) => (
+                  <div
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/80 p-4"
+                    key={team.id}
+                  >
+                    <div>
+                      <p className="text-base font-semibold text-foreground">
+                        #{index + 1} {team.team_name}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {team.player_one_email} • {team.player_two_email}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        DUPR IDs: {team.player_one_dupr_id || "Not provided"} • {team.player_two_dupr_id || "Not provided"}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Joined {new Date(team.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Joined {new Date(team.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : null}
         </Card>
