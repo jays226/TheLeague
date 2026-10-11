@@ -115,6 +115,25 @@ export default async function AdminPage({
     .filter((team) => team.is_waitlist)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const waitlistPlayerEmails = waitlistTeams.flatMap((team) => [team.player_one_email, team.player_two_email]).filter(Boolean);
+  const unpaidPlayerEmails = [
+    ...new Set(
+      teams
+        .filter((team) => !team.is_waitlist && team.payment_status !== "approved")
+        .flatMap((team) => [team.player_one_email, team.player_two_email])
+        .filter((value): value is string => Boolean(value))
+    )
+  ].join(",");
+  const teamsWithApprovedSlots = new Set(
+    reservations.filter((reservation) => reservation.status === "approved").map((reservation) => reservation.team_id)
+  );
+  const paidUnslottedEmails = [
+    ...new Set(
+      teams
+        .filter((team) => !team.is_waitlist && team.payment_status === "approved" && !teamsWithApprovedSlots.has(team.id))
+        .flatMap((team) => [team.player_one_email, team.player_two_email])
+        .filter((value): value is string => Boolean(value))
+    )
+  ].join(",");
   const participantEmails = [
     ...new Set(
       teams
@@ -244,6 +263,28 @@ export default async function AdminPage({
             <p className="break-all text-sm text-foreground">{participantEmails}</p>
           </div>
         </Card>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Card className="p-6">
+            <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Unpaid player emails</p>
+            <p className="mt-2 text-lg font-semibold text-foreground">
+              Players on non-waitlisted teams with payment still pending
+            </p>
+            <div className="mt-5 rounded-2xl bg-white/80 p-4">
+              <p className="break-all text-sm text-foreground">{unpaidPlayerEmails || "No unpaid players."}</p>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Paid, no approved slot</p>
+            <p className="mt-2 text-lg font-semibold text-foreground">
+              Players on paid teams without an approved slot reservation
+            </p>
+            <div className="mt-5 rounded-2xl bg-white/80 p-4">
+              <p className="break-all text-sm text-foreground">{paidUnslottedEmails || "No paid teams are missing an approved slot."}</p>
+            </div>
+          </Card>
+        </div>
 
         <Card className="p-6">
           <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Playoff team emails</p>
