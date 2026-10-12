@@ -50,7 +50,7 @@ You still need to provide:
 - Team records and league data are stored in Postgres. Existing records are assigned to Spring 2026; new registrations belong to Fall 2026.
 - Members can only request timeslots after their payment is approved.
 - When an admin approves a team payment, the app can email both team members if SMTP is configured.
-- Fall 2026 regular season runs October 12 through November 4, with the playoff tournament on Sunday, November 8.
+- Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15.
 - Weekly slots are Monday through Wednesday, 5:00–5:45 PM at Snyder Courts and 6:00–6:45 PM at Perry Courts.
 - Social Team players pay $5 per player through October 7; Non-Social Team players pay $15. After October 7, all players pay $15. Teams registering through October 7 need at least one Social Team player, verified against the Social roster.
 - Each player must provide a DUPR ID at signup so results can be recorded in DUPR.

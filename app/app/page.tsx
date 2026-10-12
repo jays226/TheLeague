@@ -380,8 +380,8 @@ export default async function AppPage({
                   {activeReservation.day_label} • {activeReservation.time_label}
                 </h2>
                 <p className="mt-3 text-base leading-7 text-muted-foreground">
-                  Fall 2026 runs from Monday, October 12 through Wednesday, November 4. You&apos;ll play four
-                  weekly matches inside this slot; the playoff tournament is Sunday, November 8.
+                  Fall 2026 runs from Monday, October 19 through Wednesday, November 11. You&apos;ll play four
+                  weekly matches inside this slot; the playoff tournament is Sunday, November 15.
                 </p>
                 <div className="mt-6 rounded-2xl bg-white/80 p-4">
                   <p className="text-sm text-muted-foreground">Teams in your slot</p>

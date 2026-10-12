@@ -130,7 +130,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-                  A UVA pickleball league with weekly matches from <strong>October 12</strong> through <strong>November 4</strong> and a playoff tournament on <strong>Sunday, November 8</strong>.
+                  A UVA pickleball league with weekly matches from <strong>October 19</strong> through <strong>November 11</strong> and a playoff tournament on <strong>Sunday, November 15</strong>.
                 </p>
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
@@ -176,7 +176,7 @@ export default async function HomePage() {
                     Each matchup is best two out of three games during that slot.
                   </p>
                   <p>
-                    The regular season runs October 12 through November 4, followed by the playoff tournament on November 8.
+                    The regular season runs October 19 through November 11, followed by the playoff tournament on November 15.
                   </p>
                   <p>Social pricing ends October 7. Each of the six weekly time slots can hold six teams, for 36 teams total.</p>
                 </div>
@@ -214,7 +214,7 @@ export default async function HomePage() {
                     <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
                       Season
                     </p>
-                    <p className="mt-3 text-lg font-semibold text-foreground">October 12 to November 4</p>
+                    <p className="mt-3 text-lg font-semibold text-foreground">October 19 to November 11</p>
                   </div>
                 </div>
                 <div className="mt-5">
