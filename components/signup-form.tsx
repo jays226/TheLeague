@@ -243,7 +243,7 @@ export function SignupForm({
           ) : (
             <>
               <p>Choose Social Team or Non-Social Team for each player. Social status is verified against the Social roster. Enter each player&apos;s DUPR ID so match results can be recorded.</p>
-              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 7, Social Team players pay $5 and Non-Social Team players pay $15; each team must include at least one Social Team player. After Oct 7, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
+              <p className="mt-2">{isSocialDiscountActive ? "Through Oct 7, Social Team players pay $5 and Non-Social Team players pay $15. After Oct 7, all players pay $15." : "All players pay $15. Social status is still recorded and verified against the Social roster."}</p>
               <p className="mt-2">
                 After registering, each player pays their own fee. {isSocialDiscountActive ? <>
                   Social Team players use the <a className="font-semibold text-primary underline" href={socialSquareLink} rel="noreferrer" target="_blank">Social Team payment link</a>; Non-Social Team players use the {" "}

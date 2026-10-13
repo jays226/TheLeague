@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RegistrationCountdown } from "@/components/registration-countdown";
 import { SignupForm } from "@/components/signup-form";
 import { Card } from "@/components/ui/card";
-import { listSlots, listTeams, type SlotRecord } from "@/lib/db";
+import { listAllReservations, listSlots, listTeams, type SlotRecord } from "@/lib/db";
 import { env } from "@/lib/env";
 import { isSocialDiscountActive } from "@/lib/pricing";
 import { totalLeagueTeamCapacity } from "@/lib/slots";
@@ -17,9 +17,17 @@ export default async function HomePage() {
   let registeredTeamCount = 0;
 
   try {
-    slots = await listSlots();
-    const teams = await listTeams();
-    registeredTeamCount = teams.filter((team) => !team.is_waitlist && team.payment_status === "approved").length;
+    const [loadedSlots, teams, reservations] = await Promise.all([listSlots(), listTeams(), listAllReservations()]);
+    slots = loadedSlots;
+    const teamsById = new Map(teams.map((team) => [team.id, team]));
+    registeredTeamCount = new Set(
+      reservations
+        .filter((reservation) => {
+          const team = teamsById.get(reservation.team_id);
+          return reservation.status === "approved" && team?.payment_status === "approved" && !team.is_waitlist;
+        })
+        .map((reservation) => reservation.team_id)
+    ).size;
   } catch {
     // Leave the public marketing page available even if the database is temporarily unavailable.
     slots = [];
@@ -105,7 +113,7 @@ export default async function HomePage() {
                         Live league status
                       </p>
                       <p className="mt-1 text-base font-semibold text-foreground">
-                        Teams registered
+                        Teams with a reserved time slot
                       </p>
                     </div>
                     <p className="text-2xl font-semibold tracking-[-0.04em] text-foreground">
@@ -124,7 +132,7 @@ export default async function HomePage() {
                     </p>
                     <p className="text-muted-foreground">
                       {openRegistrationSpots > 0
-                        ? `${openRegistrationSpots} spots still open`
+                        ? `${openRegistrationSpots} time slots still open`
                         : "The league is currently full"}
                     </p>
                   </div>
@@ -198,7 +206,7 @@ export default async function HomePage() {
                     </p>
                     <p className="mt-3 text-lg font-semibold text-foreground">
                       {socialDiscountActive
-                        ? "Through October 7, Social Team players pay $5 and Non-Social Team players pay $15. Each team needs one Social Team player; after October 7, everyone pays $15."
+                        ? "Through October 7, Social Team players pay $5 and Non-Social Team players pay $15. After October 7, everyone pays $15."
                         : "All players pay $15 each. Social status is still recorded and checked against the Social roster."}
                     </p>
                   </div>
@@ -330,13 +338,10 @@ export default async function HomePage() {
                           Social pricing ends Wednesday, October 7, 2026 at 11:59 PM EDT.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          Each team must include at least one Social Team player until Oct 7.
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
                           {leagueIsFull
                             ? "Add both players and create a team password to join the waitlist. We will reach out if spots open."
                             : socialDiscountActive
-                              ? "Add both players, choose each player’s team type, and create a team password. At least one player must be designated Social Team through October 7."
+                              ? "Add both players, choose each player’s team type, and create a team password."
                               : "Add both players, choose each player’s membership type, and create a team password. Social status will be checked against the roster."}
                         </p>
                       </div>

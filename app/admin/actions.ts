@@ -32,7 +32,6 @@ import {
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
 import { env } from "@/lib/env";
-import { isSocialDiscountActive } from "@/lib/pricing";
 import { buildPlayoffBracket, generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import {
   adminCookieName,
@@ -162,10 +161,6 @@ export async function createTeamAction(formData: FormData) {
 
   const playerOneType = String(formData.get("playerOneType") || "general") === "social" ? "social" : "general";
   const playerTwoType = String(formData.get("playerTwoType") || "general") === "social" ? "social" : "general";
-  if (isSocialDiscountActive() && playerOneType !== "social" && playerTwoType !== "social") {
-    throw new Error("At least one team member must be designated as a Social Team player through October 7.");
-  }
-
   await createTeamByAdmin({
     id: createId(),
     teamName: String(formData.get("teamName") || "").trim(),

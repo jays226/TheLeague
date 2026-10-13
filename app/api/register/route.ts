@@ -8,20 +8,13 @@ import { verifyEmails } from "@/lib/email-verification";
 import { ensureNoExistingTeam } from "@/lib/registration";
 import { createAccessToken, createId, leagueCookieName } from "@/lib/session";
 import { signupSchema } from "@/lib/validation";
-import { getPlayerFeeCents, isSocialDiscountActive } from "@/lib/pricing";
+import { getPlayerFeeCents } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   try {
     const rawData = await request.json();
     const data = signupSchema.parse(rawData);
     await ensureNoExistingTeam(data);
-    if (isSocialDiscountActive() && data.playerOneType !== "social" && data.playerTwoType !== "social") {
-      return NextResponse.json(
-        { error: "At least one team member must be designated as a Social Team player through October 7." },
-        { status: 400 }
-      );
-    }
-
     const playerOneFeeCents = getPlayerFeeCents(data.playerOneType);
     const playerTwoFeeCents = getPlayerFeeCents(data.playerTwoType);
 
