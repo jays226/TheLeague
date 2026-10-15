@@ -12,7 +12,7 @@ import {
   type SlotStandings,
   type SlotTeam
 } from "@/lib/league-schedule";
-import { recurringSlots, totalLeagueTeamCapacity } from "@/lib/slots";
+import { recurringSlots } from "@/lib/slots";
 import { ACTIVE_SEASON_ID } from "@/lib/seasons";
 import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
 
@@ -481,7 +481,6 @@ export type CreateTeamInput = {
   amountCents?: number;
   playerOneFeeCents: number;
   playerTwoFeeCents: number;
-  isWaitlist?: boolean;
   accessToken: string;
 };
 
@@ -708,11 +707,21 @@ export async function isAdminLoginRateLimited() {
 export async function createTeam(input: CreateTeamInput) {
   const rows = await withTransaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [ACTIVE_SEASON_ID]);
-    const countResult = await client.query<{ count: string }>(
-      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
+    const reservationCounts = await client.query<{ slot_id: string; count: string }>(
+      `
+        SELECT r.slot_id, COUNT(DISTINCT r.team_id)::text AS count
+        FROM reservations r
+        JOIN teams t ON t.id = r.team_id
+        WHERE t.season_id = $1
+          AND t.payment_status = 'approved'
+          AND t.is_waitlist = false
+          AND r.status = 'approved'
+        GROUP BY r.slot_id
+      `,
       [ACTIVE_SEASON_ID]
     );
-    const isWaitlist = Boolean(input.isWaitlist) || Number(countResult.rows[0]?.count || 0) >= totalLeagueTeamCapacity;
+    const countsBySlot = new Map(reservationCounts.rows.map((row) => [row.slot_id, Number(row.count)]));
+    const isWaitlist = recurringSlots.every((slot) => (countsBySlot.get(slot.id) || 0) >= slot.capacity);
     const result = await client.query<TeamRecord>(
       `
       INSERT INTO teams (
@@ -947,18 +956,28 @@ export async function approveTeamPayment(teamId: string) {
     const team = teamResult.rows[0];
     if (!team) throw new Error("Team not found in the active season.");
     if (team.payment_status === "approved") return;
-    if (team.is_waitlist) throw new Error("Move this team off the waitlist before approving payment.");
 
-    const countResult = await client.query<{ count: string }>(
-      "SELECT COUNT(*)::text AS count FROM teams WHERE season_id = $1 AND payment_status = 'approved' AND is_waitlist = false",
+    const reservationCounts = await client.query<{ slot_id: string; count: string }>(
+      `
+        SELECT r.slot_id, COUNT(DISTINCT r.team_id)::text AS count
+        FROM reservations r
+        JOIN teams t ON t.id = r.team_id
+        WHERE t.season_id = $1
+          AND t.payment_status = 'approved'
+          AND t.is_waitlist = false
+          AND r.status = 'approved'
+        GROUP BY r.slot_id
+      `,
       [ACTIVE_SEASON_ID]
     );
-    if (Number(countResult.rows[0]?.count || 0) >= totalLeagueTeamCapacity) {
-      throw new Error(`The ${totalLeagueTeamCapacity}-team limit has been reached. Move a team to the waitlist before approving another payment.`);
+    const countsBySlot = new Map(reservationCounts.rows.map((row) => [row.slot_id, Number(row.count)]));
+    const allSlotsFull = recurringSlots.every((slot) => (countsBySlot.get(slot.id) || 0) >= slot.capacity);
+    if (allSlotsFull) {
+      throw new Error("All time slots are full. A spot must open before approving another team.");
     }
 
     await client.query(
-      `UPDATE teams SET payment_status = 'approved', paid_at = COALESCE(paid_at, now()) WHERE id = $1 AND season_id = $2`,
+      `UPDATE teams SET payment_status = 'approved', is_waitlist = false, paid_at = COALESCE(paid_at, now()) WHERE id = $1 AND season_id = $2`,
       [teamId, ACTIVE_SEASON_ID]
     );
   });

@@ -49,6 +49,7 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{
     error?: string;
+    paymentError?: string;
     playoffMessage?: string;
     playoffTone?: "success" | "error";
   }>;
@@ -235,6 +236,14 @@ export default async function AdminPage({
             </form>
           </div>
         </header>
+
+        {params.paymentError ? (
+          <div className="rounded-2xl border border-[rgba(245,132,79,0.3)] bg-[rgba(245,132,79,0.12)] px-4 py-3 text-sm text-foreground">
+            {params.paymentError === "slots-full"
+              ? "All time slots are full. A slot must open before approving another team."
+              : "Unable to mark this team as paid. Refresh the page and try again."}
+          </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-3">
           {[

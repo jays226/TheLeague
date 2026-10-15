@@ -110,7 +110,14 @@ export async function approveTeamPaymentAction(formData: FormData) {
   const teamId = String(formData.get("teamId") || "");
   const teamBefore = await getTeamById(teamId);
 
-  await approveTeamPayment(teamId);
+  try {
+    await approveTeamPayment(teamId);
+  } catch (error) {
+    console.error("Team payment approval failed", error);
+    redirect(error instanceof Error && error.message.includes("All time slots are full")
+      ? "/admin?paymentError=slots-full"
+      : "/admin?paymentError=approval-failed");
+  }
 
   const teamAfter = await getTeamById(teamId);
 

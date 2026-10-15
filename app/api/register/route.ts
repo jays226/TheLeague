@@ -45,7 +45,6 @@ export async function POST(request: Request) {
       amountCents: playerOneFeeCents + playerTwoFeeCents,
       playerOneFeeCents,
       playerTwoFeeCents,
-      isWaitlist: false,
       accessToken: createAccessToken()
     });
 

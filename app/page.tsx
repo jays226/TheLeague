@@ -37,8 +37,12 @@ export default async function HomePage() {
   const totalCapacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const heroCapacity = totalCapacity || totalLeagueTeamCapacity;
   const heroFillPercent = Math.min((registeredTeamCount / heroCapacity) * 100, 100);
-  const leagueIsFull = registeredTeamCount >= heroCapacity;
-  const openRegistrationSpots = Math.max(heroCapacity - registeredTeamCount, 0);
+  const leagueIsFull = slots.length > 0
+    ? slots.every((slot) => slot.is_full === 1)
+    : registeredTeamCount >= heroCapacity;
+  const openRegistrationSpots = slots.length > 0
+    ? slots.reduce((sum, slot) => sum + Number(slot.available_spots), 0)
+    : Math.max(heroCapacity - registeredTeamCount, 0);
 
   return (
     <main className="relative overflow-hidden">
@@ -113,7 +117,7 @@ export default async function HomePage() {
                         Live league status
                       </p>
                       <p className="mt-1 text-base font-semibold text-foreground">
-                        Teams with a reserved time slot
+                        Teams registered
                       </p>
                     </div>
                     <p className="text-2xl font-semibold tracking-[-0.04em] text-foreground">
