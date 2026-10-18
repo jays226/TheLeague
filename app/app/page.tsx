@@ -366,12 +366,8 @@ export default async function AppPage({
                 <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
                   <p>Each weekly matchup is best two out of three games.</p>
                   <p>
-                    Opponents are pulled from the teams in your reserved time slot and locked into a
-                    season rotation.
-                  </p>
-                  <p>
-                    The fourth week repeats an earlier matchup so every team still plays four total
-                    league games.
+                    Each six-team time slot follows a round-robin rotation. You play a different
+                    opponent each week, facing four of the other five teams.
                   </p>
                 </div>
               </Card>
