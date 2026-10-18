@@ -4,7 +4,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { logoutTeamAction } from "@/app/app/actions";
-import { LiveBracket } from "@/components/dashboard/live-bracket";
 import { ReservationBanner } from "@/components/dashboard/reservation-banner";
 import { ScoreReportPanel } from "@/components/dashboard/score-report-panel";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +12,11 @@ import {
   getActiveReservationForTeam,
   getTeamById,
   getTeamByAccessToken,
-  listLeagueGames,
   listLeagueGamesForTeam,
   listLeagueStandings,
-  listPlayoffGameResults,
-  listPlayoffSeedOverrides,
-  listTeamsWithReservations,
   listSlots
 } from "@/lib/db";
 import { getLeagueGameWindow } from "@/lib/eastern-time";
-import { generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import { env } from "@/lib/env";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
@@ -68,34 +62,15 @@ export default async function AppPage({
   const activeReservation = await getActiveReservationForTeam(team.id);
   const slots = await listSlots();
   const activeSlot = activeReservation ? slots.find((slot) => slot.id === activeReservation.slot_id) : undefined;
-  const leagueGames = await listLeagueGames();
   const teamSchedule = await listLeagueGamesForTeam(team.id);
   const standings = await listLeagueStandings();
-  const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
-  const playoffSeedOverrides = await listPlayoffSeedOverrides();
-  const playoffGameResults = await listPlayoffGameResults();
-  const teams = await listTeamsWithReservations();
-  const qualifiedPlayoffSeeds = resolvePlayoffField({
-    autoSeeds: playoffSeeds,
-    overrides: playoffSeedOverrides.map((override) => ({
-      seed: override.seed,
-      teamId: override.team_id
-    })),
-    teamContextById: new Map(
-      teams.map((entry) => [
-        entry.id,
-        {
-          teamId: entry.id,
-          teamName: entry.team_name,
-          slotId: entry.active_slot_id,
-          slotLabel:
-            entry.active_day_label && entry.active_time_label
-              ? `${entry.active_day_label} • ${entry.active_time_label}`
-              : "No slot assigned"
-        }
-      ])
+  const overallStandings = standings
+    .flatMap((slotStanding) =>
+      slotStanding.teams.map((entry) => ({ ...entry, slotLabel: slotStanding.label, slotId: slotStanding.slotId }))
     )
-  });
+    .sort((left, right) =>
+      right.percentage - left.percentage || right.wins - left.wins || left.teamName.localeCompare(right.teamName)
+    );
   const currentSlotStandings = activeReservation
     ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
     : undefined;
@@ -148,13 +123,12 @@ export default async function AppPage({
               />
             </div>
             <div>
-              <Badge>Live bracket</Badge>
+              <Badge>Schedule</Badge>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-foreground">
                 {team.team_name}
               </h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-                This is now your main portal page: check the live playoff picture first, then scroll
-                for your weekly matchup, slot details, and standings.
+                Your schedule, match reporting, and league standings are here.
               </p>
               <Link
                 className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-[#E1306C] px-4 text-sm font-semibold text-white transition hover:bg-[#c72b5f]"
@@ -232,17 +206,6 @@ export default async function AppPage({
           </Card>
         ) : (
           <>
-            <Card className="p-6">
-              <LiveBracket
-                currentTeamId={team.id}
-                qualifiedSeeds={qualifiedPlayoffSeeds}
-                results={playoffGameResults.map((result) => ({
-                  matchupId: result.matchup_id,
-                  winnerTeamId: result.winner_team_id
-                }))}
-              />
-            </Card>
-
             <Card className="p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -531,7 +494,7 @@ export default async function AppPage({
                 <div>
                   <p className="text-sm uppercase tracking-[0.16em] text-primary/65">Standings</p>
                   <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-                    All slot standings
+                    Overall league leaderboard
                   </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
@@ -543,33 +506,15 @@ export default async function AppPage({
                 then alphabetically.
               </p>
 
-              <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                {standings.map((slotStanding) => (
-                  <div className="rounded-3xl bg-white/82 p-5 shadow-soft" key={slotStanding.slotId}>
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/65">
-                      {slotStanding.label}
-                    </p>
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-border/70">
-                      <div className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
-                        <span>Team</span>
-                        <span>W</span>
-                        <span>L</span>
-                        <span>Pct</span>
-                      </div>
-                      {slotStanding.teams.map((entry) => (
-                        <div
-                          className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] border-t border-border/60 px-4 py-3 text-sm text-foreground"
-                          key={`${slotStanding.slotId}-${entry.teamName}`}
-                        >
-                          <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>
-                            {entry.teamName}
-                          </span>
-                          <span>{entry.wins}</span>
-                          <span>{entry.losses}</span>
-                          <span>{entry.percentage.toFixed(3)}</span>
-                        </div>
-                      ))}
-                    </div>
+              <div className="mt-5 overflow-hidden rounded-2xl border border-border/70">
+                <div className="grid grid-cols-[0.4fr_1.5fr_1fr_0.5fr_0.5fr_0.7fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
+                  <span>#</span><span>Team</span><span>Slot</span><span>W</span><span>L</span><span>Pct</span>
+                </div>
+                {overallStandings.map((entry, index) => (
+                  <div className="grid grid-cols-[0.4fr_1.5fr_1fr_0.5fr_0.5fr_0.7fr] border-t border-border/60 px-4 py-3 text-sm text-foreground" key={`${entry.slotId}-${entry.teamName}`}>
+                    <span>{index + 1}</span>
+                    <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>{entry.teamName}</span>
+                    <span>{entry.slotLabel}</span><span>{entry.wins}</span><span>{entry.losses}</span><span>{entry.percentage.toFixed(3)}</span>
                   </div>
                 ))}
               </div>

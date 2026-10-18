@@ -33,7 +33,7 @@ export default function LoginPage() {
             className="inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-foreground transition hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
             href="/"
           >
-            Back to signup
+            Back to home
           </Link>
         </header>
 
