@@ -21,6 +21,7 @@ export type GeneratedLeagueGame = {
 
 export type LeagueGameWithResult = GeneratedLeagueGame & {
   winnerTeamId: string | null;
+  gameScores?: Array<{ home: number; away: number }> | null;
   resultType?: "standard" | "forfeit";
   forfeitingTeamId?: string | null;
 };

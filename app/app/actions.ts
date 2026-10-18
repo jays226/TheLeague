@@ -13,7 +13,7 @@ import {
   reserveSlot
 } from "@/lib/db";
 import { submitLeagueGameResult } from "@/lib/db";
-import { getLeagueGameWindow } from "@/lib/eastern-time";
+import { getApplicationNow, getLeagueGameWindow } from "@/lib/eastern-time";
 import { sendScoreMismatchAlert } from "@/lib/email-notifications";
 import { createId, leagueCookieName } from "@/lib/session";
 
@@ -120,6 +120,7 @@ function submissionsMatch(
     winnerTeamId: string;
     homeTeamWins: number;
     awayTeamWins: number;
+    gameScores: Array<{ home: number; away: number }> | null;
     resultType: "standard" | "forfeit";
     forfeitingTeamId: string | null;
   },
@@ -129,12 +130,14 @@ function submissionsMatch(
     away_team_wins: number;
     result_type: "standard" | "forfeit";
     forfeiting_team_id: string | null;
+    game_scores: Array<{ home: number; away: number }> | null;
   }
 ) {
   return (
     left.winnerTeamId === right.winner_team_id &&
     left.homeTeamWins === right.home_team_wins &&
     left.awayTeamWins === right.away_team_wins &&
+    JSON.stringify(left.gameScores) === JSON.stringify(right.game_scores) &&
     left.resultType === right.result_type &&
     left.forfeitingTeamId === right.forfeiting_team_id
   );
@@ -149,11 +152,12 @@ export async function submitGameResultAction(formData: FormData) {
     const timeLabel = String(formData.get("timeLabel") || "");
     const homeTeamId = String(formData.get("homeTeamId") || "");
     const awayTeamId = String(formData.get("awayTeamId") || "");
-    const winnerTeamId = String(formData.get("winnerTeamId") || "");
-    const homeTeamWins = Number(formData.get("homeTeamWins") || 0);
-    const awayTeamWins = Number(formData.get("awayTeamWins") || 0);
     const resultType = String(formData.get("resultType") || "standard") === "forfeit" ? "forfeit" : "standard";
     const forfeitingTeamId = String(formData.get("forfeitingTeamId") || "").trim() || null;
+    let winnerTeamId = "";
+    let homeTeamWins = 0;
+    let awayTeamWins = 0;
+    let gameScores: Array<{ home: number; away: number }> | null = null;
 
     const scheduledGames = await listLeagueGamesForTeam(team.id);
     const game = scheduledGames.find(
@@ -174,7 +178,7 @@ export async function submitGameResultAction(formData: FormData) {
     );
 
     const { opensAt, closesAt } = getLeagueGameWindow(matchDate, timeLabel);
-    const now = new Date();
+    const now = getApplicationNow();
 
     if (now < opensAt) {
       throw new Error("Score reporting opens when your match time starts.");
@@ -184,42 +188,52 @@ export async function submitGameResultAction(formData: FormData) {
       throw new Error("The score reporting window closed at midnight after your game.");
     }
 
-    if (winnerTeamId !== homeTeamId && winnerTeamId !== awayTeamId) {
-      throw new Error("Choose one of the two teams as the winner.");
-    }
-
-    if (
-      resultType === "forfeit" &&
-      forfeitingTeamId !== homeTeamId &&
-      forfeitingTeamId !== awayTeamId
-    ) {
-      throw new Error("Choose which team forfeited.");
-    }
-
-    if (
-      !Number.isInteger(homeTeamWins) ||
-      !Number.isInteger(awayTeamWins) ||
-      homeTeamWins < 0 ||
-      awayTeamWins < 0 ||
-      homeTeamWins > 3 ||
-      awayTeamWins > 3
-    ) {
-      throw new Error("Scores must be whole numbers between 0 and 3.");
-    }
-
-    if (homeTeamWins === awayTeamWins) {
-      throw new Error("The match result cannot be a tie.");
-    }
-
-    if (homeTeamWins + awayTeamWins > 3) {
-      throw new Error("Enter a valid best-of-three result, such as 2-0 or 2-1.");
-    }
-
-    if (
-      (winnerTeamId === homeTeamId && homeTeamWins < awayTeamWins) ||
-      (winnerTeamId === awayTeamId && awayTeamWins < homeTeamWins)
-    ) {
-      throw new Error("The winner must have more game wins than the other team.");
+    if (resultType === "forfeit") {
+      if (forfeitingTeamId !== homeTeamId && forfeitingTeamId !== awayTeamId) {
+        throw new Error("Choose which team forfeited.");
+      }
+      winnerTeamId = forfeitingTeamId === homeTeamId ? awayTeamId : homeTeamId;
+      homeTeamWins = winnerTeamId === homeTeamId ? 2 : 0;
+      awayTeamWins = winnerTeamId === awayTeamId ? 2 : 0;
+    } else {
+      if (forfeitingTeamId) {
+        throw new Error("A normal result cannot include a forfeiting team.");
+      }
+      const rawScores = [1, 2, 3].map((index) => ({
+        home: String(formData.get(`game${index}HomeScore`) ?? "").trim(),
+        away: String(formData.get(`game${index}AwayScore`) ?? "").trim()
+      }));
+      if (!rawScores[0].home || !rawScores[0].away || !rawScores[1].home || !rawScores[1].away) {
+        throw new Error("Enter the point score for the first two games.");
+      }
+      if (Boolean(rawScores[2].home) !== Boolean(rawScores[2].away)) {
+        throw new Error("Enter both scores for Game 3, or leave both blank.");
+      }
+      const enteredScores = rawScores
+        .filter((score) => score.home !== "" && score.away !== "")
+        .map((score) => ({ home: Number(score.home), away: Number(score.away) }));
+      if (enteredScores.some((score) => !Number.isInteger(score.home) || !Number.isInteger(score.away) || score.home < 0 || score.away < 0)) {
+        throw new Error("Game scores must be whole numbers of zero or higher.");
+      }
+      for (const score of enteredScores) {
+        if (score.home === score.away) throw new Error("An individual game cannot end in a tie.");
+        if (homeTeamWins === 2 || awayTeamWins === 2) {
+          throw new Error("Do not enter a game score after one team has won the match.");
+        }
+        if (score.home > score.away) homeTeamWins += 1;
+        else awayTeamWins += 1;
+      }
+      if (homeTeamWins !== 2 && awayTeamWins !== 2) {
+        throw new Error("A best-of-three match needs a winner. Enter the deciding Game 3 score.");
+      }
+      if ((homeTeamWins === 2 || awayTeamWins === 2) && enteredScores.length < 2) {
+        throw new Error("Enter at least two game scores.");
+      }
+      if (enteredScores.length === 3 && homeTeamWins + awayTeamWins !== 3) {
+        throw new Error("Enter scores only for games that were played.");
+      }
+      winnerTeamId = homeTeamWins === 2 ? homeTeamId : awayTeamId;
+      gameScores = enteredScores;
     }
 
     await submitLeagueGameResult({
@@ -233,7 +247,8 @@ export async function submitGameResultAction(formData: FormData) {
       homeTeamWins,
       awayTeamWins,
       resultType,
-      forfeitingTeamId
+      forfeitingTeamId,
+      gameScores
     });
 
     if (
@@ -243,6 +258,7 @@ export async function submitGameResultAction(formData: FormData) {
           winnerTeamId,
           homeTeamWins,
           awayTeamWins,
+          gameScores,
           resultType,
           forfeitingTeamId
         },
@@ -255,6 +271,7 @@ export async function submitGameResultAction(formData: FormData) {
             winnerTeamId,
             homeTeamWins,
             awayTeamWins,
+            gameScores,
             resultType,
             forfeitingTeamId
           },
@@ -271,7 +288,7 @@ export async function submitGameResultAction(formData: FormData) {
           submittedByTeamName: team.team_name,
           submittedWinnerTeamName:
             winnerTeamId === homeTeamId ? game.homeTeamName : game.awayTeamName,
-          submittedScore: `${homeTeamWins}-${awayTeamWins}`,
+          submittedScore: gameScores?.map((score) => `${score.home}-${score.away}`).join(", ") ?? `${homeTeamWins}-${awayTeamWins}`,
           opponentSubmittedByTeamName:
             opponentSubmission.submitting_team_id === homeTeamId
               ? game.homeTeamName
@@ -280,7 +297,7 @@ export async function submitGameResultAction(formData: FormData) {
             opponentSubmission.winner_team_id === homeTeamId
               ? game.homeTeamName
               : game.awayTeamName,
-          opponentScore: `${opponentSubmission.home_team_wins}-${opponentSubmission.away_team_wins}`
+          opponentScore: opponentSubmission.game_scores?.map((score) => `${score.home}-${score.away}`).join(", ") ?? `${opponentSubmission.home_team_wins}-${opponentSubmission.away_team_wins}`
         });
       } catch (error) {
         console.error("Score mismatch alert failed", error);

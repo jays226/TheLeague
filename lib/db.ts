@@ -288,6 +288,11 @@ async function ensureBootstrap() {
       `);
 
       await pool.query(`
+        ALTER TABLE game_results
+        ADD COLUMN IF NOT EXISTS game_scores jsonb
+      `);
+
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS game_result_submissions (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           slot_id text NOT NULL,
@@ -314,6 +319,11 @@ async function ensureBootstrap() {
       await pool.query(`
         ALTER TABLE game_result_submissions
         ADD COLUMN IF NOT EXISTS forfeiting_team_id uuid REFERENCES teams(id) ON DELETE SET NULL
+      `);
+
+      await pool.query(`
+        ALTER TABLE game_result_submissions
+        ADD COLUMN IF NOT EXISTS game_scores jsonb
       `);
 
       await pool.query(`
@@ -541,6 +551,7 @@ export type LeagueGameResultRecord = {
   away_team_wins: number | null;
   result_type: "standard" | "forfeit";
   forfeiting_team_id: string | null;
+  game_scores: Array<{ home: number; away: number }> | null;
   created_at: string;
   updated_at: string;
 };
@@ -575,6 +586,7 @@ export type LeagueGameSubmissionRecord = {
   away_team_wins: number;
   result_type: "standard" | "forfeit";
   forfeiting_team_id: string | null;
+  game_scores: Array<{ home: number; away: number }> | null;
   created_at: string;
   updated_at: string;
 };
@@ -595,6 +607,7 @@ export type LeagueGameRecord = LeagueGameWithResult & {
   awayTeamWins: number | null;
   resultType: "standard" | "forfeit";
   forfeitingTeamId: string | null;
+  gameScores: Array<{ home: number; away: number }> | null;
   submissions: LeagueGameSubmissionRecord[];
 };
 
@@ -1362,6 +1375,7 @@ function resolveLeagueGameResult(
       winnerTeamId: adminResult.winner_team_id,
       homeTeamWins: adminResult.home_team_wins,
       awayTeamWins: adminResult.away_team_wins,
+      gameScores: adminResult.game_scores,
       resultType: adminResult.result_type,
       forfeitingTeamId: adminResult.forfeiting_team_id
     };
@@ -1372,6 +1386,7 @@ function resolveLeagueGameResult(
       winnerTeamId: null,
       homeTeamWins: null,
       awayTeamWins: null,
+      gameScores: null,
       resultType: "standard" as const,
       forfeitingTeamId: null
     };
@@ -1383,6 +1398,7 @@ function resolveLeagueGameResult(
       submission.winner_team_id === firstSubmission.winner_team_id &&
       submission.home_team_wins === firstSubmission.home_team_wins &&
       submission.away_team_wins === firstSubmission.away_team_wins &&
+      JSON.stringify(submission.game_scores ?? null) === JSON.stringify(firstSubmission.game_scores ?? null) &&
       submission.result_type === firstSubmission.result_type &&
       submission.forfeiting_team_id === firstSubmission.forfeiting_team_id
   );
@@ -1392,6 +1408,7 @@ function resolveLeagueGameResult(
       winnerTeamId: null,
       homeTeamWins: null,
       awayTeamWins: null,
+      gameScores: null,
       resultType: "standard" as const,
       forfeitingTeamId: null
     };
@@ -1401,6 +1418,7 @@ function resolveLeagueGameResult(
     winnerTeamId: firstSubmission.winner_team_id,
     homeTeamWins: firstSubmission.home_team_wins,
     awayTeamWins: firstSubmission.away_team_wins,
+    gameScores: firstSubmission.game_scores,
     resultType: firstSubmission.result_type,
     forfeitingTeamId: firstSubmission.forfeiting_team_id
   };
@@ -1495,6 +1513,7 @@ export async function listLeagueGames() {
         winnerTeamId: resolvedResult.winnerTeamId,
         homeTeamWins: resolvedResult.homeTeamWins,
         awayTeamWins: resolvedResult.awayTeamWins,
+        gameScores: resolvedResult.gameScores,
         resultType: resolvedResult.resultType,
         forfeitingTeamId: resolvedResult.forfeitingTeamId,
         submissions: gameSubmissions
@@ -1529,6 +1548,7 @@ export async function saveLeagueGameResult(input: {
   awayTeamWins?: number | null;
   resultType?: "standard" | "forfeit";
   forfeitingTeamId?: string | null;
+  gameScores?: Array<{ home: number; away: number }> | null;
 }) {
   if (!input.winnerTeamId) {
     await query(
@@ -1561,10 +1581,11 @@ export async function saveLeagueGameResult(input: {
         away_team_wins,
         result_type,
         forfeiting_team_id,
+        game_scores,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, now(), now())
       ON CONFLICT (slot_id, week, home_team_id, away_team_id)
       DO UPDATE SET
         winner_team_id = EXCLUDED.winner_team_id,
@@ -1572,6 +1593,7 @@ export async function saveLeagueGameResult(input: {
         away_team_wins = EXCLUDED.away_team_wins,
         result_type = EXCLUDED.result_type,
         forfeiting_team_id = EXCLUDED.forfeiting_team_id,
+        game_scores = EXCLUDED.game_scores,
         match_date = EXCLUDED.match_date,
         updated_at = now()
     `,
@@ -1585,7 +1607,8 @@ export async function saveLeagueGameResult(input: {
       input.homeTeamWins ?? null,
       input.awayTeamWins ?? null,
       input.resultType ?? "standard",
-      input.forfeitingTeamId ?? null
+      input.forfeitingTeamId ?? null,
+      input.gameScores ? JSON.stringify(input.gameScores) : null
     ]
   );
 }
@@ -1602,6 +1625,7 @@ export async function submitLeagueGameResult(input: {
   awayTeamWins: number;
   resultType?: "standard" | "forfeit";
   forfeitingTeamId?: string | null;
+  gameScores?: Array<{ home: number; away: number }> | null;
 }) {
   await query(
     `
@@ -1617,10 +1641,11 @@ export async function submitLeagueGameResult(input: {
         away_team_wins,
         result_type,
         forfeiting_team_id,
+        game_scores,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, now(), now())
       ON CONFLICT (slot_id, week, home_team_id, away_team_id, submitting_team_id)
       DO UPDATE SET
         winner_team_id = EXCLUDED.winner_team_id,
@@ -1628,6 +1653,7 @@ export async function submitLeagueGameResult(input: {
         away_team_wins = EXCLUDED.away_team_wins,
         result_type = EXCLUDED.result_type,
         forfeiting_team_id = EXCLUDED.forfeiting_team_id,
+        game_scores = EXCLUDED.game_scores,
         match_date = EXCLUDED.match_date,
         updated_at = now()
     `,
@@ -1642,7 +1668,8 @@ export async function submitLeagueGameResult(input: {
       input.homeTeamWins,
       input.awayTeamWins,
       input.resultType ?? "standard",
-      input.forfeitingTeamId ?? null
+      input.forfeitingTeamId ?? null,
+      input.gameScores ? JSON.stringify(input.gameScores) : null
     ]
   );
 }

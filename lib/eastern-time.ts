@@ -1,5 +1,18 @@
 const easternTimeZone = "America/New_York";
 
+export function getApplicationNow() {
+  const localTestTime = process.env.LOCAL_TEST_NOW;
+
+  if (process.env.NODE_ENV !== "production" && localTestTime) {
+    const parsedTestTime = new Date(localTestTime);
+    if (!Number.isNaN(parsedTestTime.getTime())) {
+      return parsedTestTime;
+    }
+  }
+
+  return new Date();
+}
+
 type EasternDateParts = {
   year: number;
   month: number;

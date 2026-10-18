@@ -16,14 +16,10 @@ import {
   listLeagueStandings,
   listSlots
 } from "@/lib/db";
-import { getLeagueGameWindow } from "@/lib/eastern-time";
+import { getApplicationNow, getLeagueGameWindow } from "@/lib/eastern-time";
 import { env } from "@/lib/env";
 import { leagueCookieName } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
-
-function getCurrentPortalTime() {
-  return new Date();
-}
 
 function getForfeitLabel(input: {
   forfeitingTeamId: string | null;
@@ -74,7 +70,7 @@ export default async function AppPage({
   const currentSlotStandings = activeReservation
     ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
     : undefined;
-  const now = getCurrentPortalTime();
+  const now = getApplicationNow();
   const decoratedSchedule = teamSchedule
     .map((game) => {
       const { opensAt, closesAt } = getLeagueGameWindow(game.matchDate, game.timeLabel);
@@ -245,6 +241,13 @@ export default async function AppPage({
                           {currentMatchup.teamSubmission.home_team_wins}-
                           {currentMatchup.teamSubmission.away_team_wins}
                         </span>
+                        {currentMatchup.teamSubmission.game_scores?.length ? (
+                          <span className="ml-2">
+                            (points: {currentMatchup.teamSubmission.game_scores
+                              .map((score) => `${score.home}-${score.away}`)
+                              .join(", ")})
+                          </span>
+                        ) : null}
                         {currentMatchup.teamSubmission.result_type === "forfeit" ? (
                           <span className="ml-1">
                             (
@@ -281,18 +284,49 @@ export default async function AppPage({
                   </div>
 
                   {opponentTeam ? (
-                    <div className="mt-4 rounded-2xl border border-border/70 bg-secondary/55 px-4 py-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
-                        Opponent contact
-                      </p>
-                      <div className="mt-2 space-y-2 text-sm text-foreground">
-                        <p className="font-semibold">{opponentTeam.team_name}</p>
-                        <p>
-                          {opponentTeam.player_one_name} • {opponentTeam.player_one_email}
+                    <div className="mt-4 rounded-2xl border border-border/70 bg-secondary/35 p-4">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/65">
+                          Match players
                         </p>
-                        <p>
-                          {opponentTeam.player_two_name} • {opponentTeam.player_two_email}
-                        </p>
+                        <p className="text-xs text-muted-foreground">DUPR IDs for match reporting</p>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {[
+                          {
+                            teamName: team.team_name,
+                            players: [
+                              { name: team.player_one_name, email: team.player_one_email, duprId: team.player_one_dupr_id },
+                              { name: team.player_two_name, email: team.player_two_email, duprId: team.player_two_dupr_id }
+                            ]
+                          },
+                          {
+                            teamName: opponentTeam.team_name,
+                            players: [
+                              { name: opponentTeam.player_one_name, email: opponentTeam.player_one_email, duprId: opponentTeam.player_one_dupr_id },
+                              { name: opponentTeam.player_two_name, email: opponentTeam.player_two_email, duprId: opponentTeam.player_two_dupr_id }
+                            ]
+                          }
+                        ].map((matchTeam) => (
+                          <section className="rounded-xl border border-border/70 bg-white/80 p-3" key={matchTeam.teamName}>
+                            <h3 className="mb-2 text-sm font-semibold text-foreground">{matchTeam.teamName}</h3>
+                            <div className="space-y-2">
+                              {matchTeam.players.map((player) => (
+                                <div className="rounded-lg bg-secondary/45 px-3 py-2" key={player.email}>
+                                  <p className="text-sm font-medium text-foreground">{player.name}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    DUPR ID <span className="font-medium text-foreground">{player.duprId || "Not provided"}</span>
+                                  </p>
+                                  {matchTeam.teamName === opponentTeam.team_name ? (
+                                    <a className="mt-1 inline-block break-all text-xs text-primary underline" href={`mailto:${player.email}`}>
+                                      {player.email}
+                                    </a>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ))}
                       </div>
                     </div>
                   ) : null}
@@ -306,15 +340,13 @@ export default async function AppPage({
                   <ScoreReportPanel
                     awayTeamId={currentMatchup.awayTeamId}
                     awayTeamName={currentMatchup.awayTeamName}
-                    awayTeamWins={currentMatchup.teamSubmission?.away_team_wins ?? null}
+                    gameScores={currentMatchup.teamSubmission?.game_scores ?? currentMatchup.gameScores ?? null}
                     currentTeamId={team.id}
                     homeTeamId={currentMatchup.homeTeamId}
                     homeTeamName={currentMatchup.homeTeamName}
-                    homeTeamWins={currentMatchup.teamSubmission?.home_team_wins ?? null}
                     isOpen={currentMatchup.canSubmitNow}
                     matchDate={currentMatchup.matchDate}
                     slotId={currentMatchup.slotId}
-                    teamSubmissionWinnerTeamId={currentMatchup.teamSubmission?.winner_team_id ?? null}
                     timeLabel={currentMatchup.timeLabel}
                     week={currentMatchup.week}
                   />
@@ -473,7 +505,7 @@ export default async function AppPage({
                               : game.winnerTeamId === team.id
                                 ? "Win"
                                 : "Loss"
-                          }`
+                          }${game.gameScores?.length ? ` (games: ${game.gameScores.map((score) => `${score.home}-${score.away}`).join(", ")})` : ""}`
                         : "Awaiting result"}
                     </p>
                   </div>

@@ -167,6 +167,9 @@ export default async function AdminGamesPage({
                               <p>
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
+                              {submission.game_scores?.length ? (
+                                <p>Individual games: {submission.game_scores.map((score) => `${score.home}-${score.away}`).join(", ")}</p>
+                              ) : null}
                               {submission.result_type === "forfeit" ? (
                                 <p>
                                   {getForfeitLabel({
@@ -211,6 +214,9 @@ export default async function AdminGamesPage({
                               <p>
                                 Reported score: {submission.home_team_wins}-{submission.away_team_wins}
                               </p>
+                              {submission.game_scores?.length ? (
+                                <p>Individual games: {submission.game_scores.map((score) => `${score.home}-${score.away}`).join(", ")}</p>
+                              ) : null}
                               {submission.result_type === "forfeit" ? (
                                 <p>
                                   {getForfeitLabel({

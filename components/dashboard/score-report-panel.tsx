@@ -7,15 +7,13 @@ import { submitGameResultAction } from "@/app/app/actions";
 type ScoreReportPanelProps = {
   awayTeamId: string;
   awayTeamName: string;
-  awayTeamWins: number | null;
+  gameScores: Array<{ home: number; away: number }> | null;
   currentTeamId: string;
   homeTeamId: string;
   homeTeamName: string;
-  homeTeamWins: number | null;
   isOpen: boolean;
   matchDate: string;
   slotId: string;
-  teamSubmissionWinnerTeamId: string | null;
   timeLabel: string;
   week: number;
 };
@@ -23,15 +21,13 @@ type ScoreReportPanelProps = {
 export function ScoreReportPanel({
   awayTeamId,
   awayTeamName,
-  awayTeamWins,
+  gameScores,
   currentTeamId,
   homeTeamId,
   homeTeamName,
-  homeTeamWins,
   isOpen,
   matchDate,
   slotId,
-  teamSubmissionWinnerTeamId,
   timeLabel,
   week
 }: ScoreReportPanelProps) {
@@ -143,46 +139,44 @@ export function ScoreReportPanel({
           </div>
 
           {reportType === "standard" ? (
-            <div className="grid gap-3 md:grid-cols-[1.1fr_0.8fr_0.8fr_auto]">
-              <select
-                className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
-                defaultValue={teamSubmissionWinnerTeamId ?? ""}
-                name="winnerTeamId"
-                required
-              >
-                <option disabled value="">
-                  Select the winner
-                </option>
-                <option value={homeTeamId}>{homeTeamName}</option>
-                <option value={awayTeamId}>{awayTeamName}</option>
-              </select>
-              <input
-                className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
-                defaultValue={homeTeamWins === null ? "" : String(homeTeamWins)}
-                inputMode="numeric"
-                max="3"
-                min="0"
-                name="homeTeamWins"
-                placeholder={`${homeTeamName} wins out of 3`}
-                required
-                type="number"
-              />
-              <input
-                className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
-                defaultValue={awayTeamWins === null ? "" : String(awayTeamWins)}
-                inputMode="numeric"
-                max="3"
-                min="0"
-                name="awayTeamWins"
-                placeholder={`${awayTeamName} wins out of 3`}
-                required
-                type="number"
-              />
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Enter each game&apos;s points. Leave Game 3 blank if the match ended 2–0.
+              </p>
+              {[0, 1, 2].map((index) => (
+                <div className="grid items-center gap-2 sm:grid-cols-[5rem_1fr_1fr]" key={index}>
+                  <span className="text-sm font-semibold text-foreground">Game {index + 1}</span>
+                  <label className="sr-only" htmlFor={`game-${index + 1}-home-score`}>{homeTeamName} game {index + 1} score</label>
+                  <input
+                    className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                    defaultValue={gameScores?.[index]?.home ?? ""}
+                    id={`game-${index + 1}-home-score`}
+                    inputMode="numeric"
+                    min="0"
+                    name={`game${index + 1}HomeScore`}
+                    placeholder={`${homeTeamName} points`}
+                    required={index < 2}
+                    type="number"
+                  />
+                  <label className="sr-only" htmlFor={`game-${index + 1}-away-score`}>{awayTeamName} game {index + 1} score</label>
+                  <input
+                    className="h-11 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                    defaultValue={gameScores?.[index]?.away ?? ""}
+                    id={`game-${index + 1}-away-score`}
+                    inputMode="numeric"
+                    min="0"
+                    name={`game${index + 1}AwayScore`}
+                    placeholder={`${awayTeamName} points`}
+                    required={index < 2}
+                    type="number"
+                  />
+                </div>
+              ))}
               <button
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
                 type="submit"
               >
-                Save score
+                Save game scores
               </button>
             </div>
           ) : (
