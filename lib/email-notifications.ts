@@ -182,7 +182,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
       "",
       "After both players' payments are received and approved, your team dashboard will unlock and you'll be able to sign up for your weekly time slot.",
       "",
-      "The Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.",
+      "The Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Fishburne (Old Dorms).",
       "",
       "You'll also be able to log in to your dashboard to view updates, and we'll continue sending important information to this email.",
       "",
@@ -226,7 +226,7 @@ export async function sendWelcomeRegistrationEmail(team: TeamRecord) {
               After both players&apos; payments are received and approved, your team dashboard will unlock and you&apos;ll be able to sign up for your weekly match time.
             </p>
             <p>
-              The Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Courts.
+              The Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15. Your weekly time is 5:00–5:45 PM at Snyder Courts or 6:00–6:45 PM at Perry Fishburne (Old Dorms).
             </p>
             <p>
               You can log in to your dashboard anytime to view updates, and we’ll also continue sending important information to this email.

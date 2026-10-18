@@ -16,7 +16,7 @@ export const recurringSlots = [
     dayLabel: "Monday",
     timeLabel: "6:00 PM",
     timeWindowLabel: "6:00 PM–6:45 PM",
-    locationLabel: "Perry Fishburne",
+    locationLabel: "Perry Fishburne (Old Dorms)",
     courtLabels: ["3", "4", "5"],
     sortOrder: 2,
     capacity: 6
@@ -38,7 +38,7 @@ export const recurringSlots = [
     dayLabel: "Tuesday",
     timeLabel: "6:00 PM",
     timeWindowLabel: "6:00 PM–6:45 PM",
-    locationLabel: "Perry Fishburne",
+    locationLabel: "Perry Fishburne (Old Dorms)",
     courtLabels: ["3", "4", "5"],
     sortOrder: 4,
     capacity: 6
@@ -60,7 +60,7 @@ export const recurringSlots = [
     dayLabel: "Wednesday",
     timeLabel: "6:00 PM",
     timeWindowLabel: "6:00 PM–6:45 PM",
-    locationLabel: "Perry Fishburne",
+    locationLabel: "Perry Fishburne (Old Dorms)",
     courtLabels: ["3", "4", "5"],
     sortOrder: 6,
     capacity: 6

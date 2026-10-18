@@ -51,7 +51,7 @@ You still need to provide:
 - Members can only request timeslots after their payment is approved.
 - When an admin approves a team payment, the app can email both team members if SMTP is configured.
 - Fall 2026 regular season runs October 19 through November 11, with the playoff tournament on Sunday, November 15.
-- Weekly slots are Monday through Wednesday, 5:00–5:45 PM at Snyder Courts and 6:00–6:45 PM at Perry Courts.
+- Weekly slots are Monday through Wednesday, 5:00–5:45 PM at Snyder Courts and 6:00–6:45 PM at Perry Fishburne (Old Dorms).
 - Social Team players paid $5 per player through October 7; Non-Social Team players paid $15. After October 7, all players pay $15. Social status is verified against the Social roster.
 - Each player must provide a DUPR ID at signup so results can be recorded in DUPR.
 - Fall 2026 is capped at 36 teams across six weekly slots, with capacity for 6 teams per slot.
