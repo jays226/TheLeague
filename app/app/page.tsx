@@ -336,6 +336,9 @@ export default async function AppPage({
                       ? "Score reporting is open for this matchup until 11:59 PM tonight."
                       : "The Log score button will activate when your match time begins."}
                   </p>
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    Once both teams confirm the score, we&apos;ll log the result for you in DUPR.
+                  </p>
 
                   <ScoreReportPanel
                     awayTeamId={currentMatchup.awayTeamId}
