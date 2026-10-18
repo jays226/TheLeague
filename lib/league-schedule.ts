@@ -486,7 +486,7 @@ export function generateSlotSchedule(slotId: string, teams: SlotTeam[]) {
       : Array.from({ length: 4 }, (_, index) => rounds[index % rounds.length]);
 
   return selectedRounds.flatMap((pairings, index) =>
-    pairings.map(([homeTeam, awayTeam]) => {
+    pairings.map(([homeTeam, awayTeam], pairingIndex) => {
       const matchDate = dates[index];
       return {
         slotId,
@@ -495,7 +495,7 @@ export function generateSlotSchedule(slotId: string, teams: SlotTeam[]) {
         week: index + 1,
         matchDate,
         dateLabel: `${formatSeasonDate(matchDate)} • ${slot.timeWindowLabel} ET`,
-        locationLabel: slot.locationLabel,
+        locationLabel: `${slot.locationLabel} • Court ${slot.courtLabels[pairingIndex % slot.courtLabels.length]}`,
         homeTeamId: homeTeam.id,
         homeTeamName: homeTeam.teamName,
         awayTeamId: awayTeam.id,

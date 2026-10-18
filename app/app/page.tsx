@@ -276,10 +276,6 @@ export default async function AppPage({
                         <p className="mt-1 text-sm font-semibold text-foreground">
                           {currentMatchup.locationLabel}
                         </p>
-                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                          "A" means the side of the court closer to Memorial Gym or Old Dorms. "B"
-                          is the other side of the court.
-                        </p>
                       </div>
                     ) : null}
                   </div>
