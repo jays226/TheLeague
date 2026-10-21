@@ -257,6 +257,7 @@ export async function saveGameResultAction(formData: FormData) {
   const homeTeamId = String(formData.get("homeTeamId") || "");
   const awayTeamId = String(formData.get("awayTeamId") || "");
   const resultType = forfeitingTeamId ? "forfeit" : "standard";
+  let gameScores: Array<{ home: number; away: number }> | null = null;
 
   if ((rawHomeTeamWins && !Number.isInteger(homeTeamWins)) || (rawAwayTeamWins && !Number.isInteger(awayTeamWins))) {
     throw new Error("Manual scores must be whole numbers.");
@@ -283,6 +284,42 @@ export async function saveGameResultAction(formData: FormData) {
     throw new Error("Forfeiting team must be one of the scheduled teams.");
   }
 
+  if (!forfeitingTeamId && winnerTeamId) {
+    const rawGameScores = [1, 2, 3].map((index) => ({
+      home: String(formData.get(`game${index}HomeScore`) ?? "").trim(),
+      away: String(formData.get(`game${index}AwayScore`) ?? "").trim()
+    }));
+    if (rawGameScores.some((score) => Boolean(score.home) !== Boolean(score.away))) {
+      throw new Error("Enter both teams' points for each game, or leave both fields blank.");
+    }
+    const enteredScores = rawGameScores
+      .filter((score) => score.home !== "" && score.away !== "")
+      .map((score) => ({ home: Number(score.home), away: Number(score.away) }));
+    if (enteredScores.some((score) => !Number.isInteger(score.home) || !Number.isInteger(score.away) || score.home < 0 || score.away < 0)) {
+      throw new Error("Individual game points must be whole numbers of zero or higher.");
+    }
+    if (enteredScores.some((score) => score.home === score.away)) {
+      throw new Error("An individual game cannot end in a tie.");
+    }
+    if (enteredScores.length > 0) {
+      if (!winnerTeamId || homeTeamWins === null || awayTeamWins === null) {
+        throw new Error("Select the match winner and match score before adding individual game points.");
+      }
+      if (enteredScores.length !== homeTeamWins + awayTeamWins) {
+        throw new Error("Enter individual point scores for each game played in the match.");
+      }
+      const actualHomeWins = enteredScores.filter((score) => score.home > score.away).length;
+      const actualAwayWins = enteredScores.length - actualHomeWins;
+      if (actualHomeWins !== homeTeamWins || actualAwayWins !== awayTeamWins) {
+        throw new Error("Individual game scores must agree with the match score above.");
+      }
+      if ((winnerTeamId === homeTeamId && actualHomeWins <= actualAwayWins) || (winnerTeamId === awayTeamId && actualAwayWins <= actualHomeWins)) {
+        throw new Error("Individual game scores must agree with the selected match winner.");
+      }
+      gameScores = enteredScores;
+    }
+  }
+
   await saveLeagueGameResult({
     slotId: String(formData.get("slotId") || ""),
     week: Number(formData.get("week") || 0),
@@ -293,7 +330,8 @@ export async function saveGameResultAction(formData: FormData) {
     homeTeamWins,
     awayTeamWins,
     resultType,
-    forfeitingTeamId: resultType === "forfeit" ? forfeitingTeamId : null
+    forfeitingTeamId: resultType === "forfeit" ? forfeitingTeamId : null,
+    gameScores
   });
 
   revalidatePath("/admin");

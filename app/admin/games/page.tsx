@@ -140,7 +140,7 @@ export default async function AdminGamesPage({
                             : game.winnerTeamId === game.homeTeamId
                               ? `${game.homeTeamName} win`
                               : `${game.awayTeamName} win`
-                        }`
+                        }${game.gameScores?.length ? ` · Games: ${game.gameScores.map((score) => `${score.home}-${score.away}`).join(", ")}` : ""}`
                       : "No final result recorded yet"}
                   </div>
                 </div>
@@ -251,6 +251,42 @@ export default async function AdminGamesPage({
                     <input name="matchDate" type="hidden" value={game.matchDate} />
                     <input name="homeTeamId" type="hidden" value={game.homeTeamId} />
                     <input name="awayTeamId" type="hidden" value={game.awayTeamId} />
+                    <p className="w-full text-sm text-muted-foreground">
+                      Update each game&apos;s points here. Leave Game 3 blank for a 2–0 match; the
+                      points must agree with the match score and winner below.
+                    </p>
+                    <div className="grid w-full gap-2 sm:grid-cols-3">
+                      {[0, 1, 2].map((index) => (
+                        <fieldset className="rounded-xl border border-border/70 bg-white/70 p-3" key={index}>
+                          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary/70">
+                            Game {index + 1} points
+                          </legend>
+                          <div className="mt-1 flex items-center gap-2">
+                            <input
+                              aria-label={`${game.homeTeamName} Game ${index + 1} points`}
+                              className="h-10 min-w-0 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                              defaultValue={game.gameScores?.[index]?.home ?? ""}
+                              inputMode="numeric"
+                              min={0}
+                              name={`game${index + 1}HomeScore`}
+                              placeholder={game.homeTeamName}
+                              type="number"
+                            />
+                            <span className="text-sm text-muted-foreground">–</span>
+                            <input
+                              aria-label={`${game.awayTeamName} Game ${index + 1} points`}
+                              className="h-10 min-w-0 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                              defaultValue={game.gameScores?.[index]?.away ?? ""}
+                              inputMode="numeric"
+                              min={0}
+                              name={`game${index + 1}AwayScore`}
+                              placeholder={game.awayTeamName}
+                              type="number"
+                            />
+                          </div>
+                        </fieldset>
+                      ))}
+                    </div>
                     <input
                       aria-label={`${game.homeTeamName} wins`}
                       className="h-11 w-20 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
