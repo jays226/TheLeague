@@ -340,7 +340,7 @@ export default async function AppPage({
                       : "The Log score button will activate when your match time begins."}
                   </p>
                   <p className="mt-2 text-sm font-medium text-primary">
-                    Once both teams confirm the score, we&apos;ll log the result for you in DUPR.
+                    Once a team submits the score, we&apos;ll log the result for you in DUPR.
                   </p>
 
                   <ScoreReportPanel
@@ -359,8 +359,8 @@ export default async function AppPage({
 
                   <p className="mt-3 text-sm text-muted-foreground">
                     {currentMatchup.opponentSubmission
-                      ? "The other team has also submitted a result. If both reports match, standings update automatically."
-                      : "Once the other team submits the same result, standings will update automatically."}
+                      ? "Both teams have submitted a result. The first team’s report is final; any mismatch is flagged for admin review."
+                      : "One team report is enough to finalize the result and update standings. The other team can still submit a report."}
                   </p>
                 </div>
               ) : (

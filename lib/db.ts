@@ -15,7 +15,6 @@ import {
 import { recurringSlots } from "@/lib/slots";
 import { ACTIVE_SEASON_ID } from "@/lib/seasons";
 import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
-import { gameScoresMatch } from "@/lib/game-scores";
 
 if (!env.databaseUrl) {
   throw new Error("Missing DATABASE_URL. Supabase/Postgres is required for this deployment.");
@@ -1275,7 +1274,7 @@ async function listGameResultSubmissions() {
       SELECT *
       FROM game_result_submissions
       WHERE home_team_id IN (SELECT id FROM teams WHERE season_id = $1)
-      ORDER BY slot_id ASC, week ASC, updated_at DESC
+      ORDER BY slot_id ASC, week ASC, created_at ASC, id ASC
     `,
     [ACTIVE_SEASON_ID]
   );
@@ -1382,7 +1381,7 @@ function resolveLeagueGameResult(
     };
   }
 
-  if (submissions.length < 2) {
+  if (submissions.length === 0) {
     return {
       winnerTeamId: null,
       homeTeamWins: null,
@@ -1393,27 +1392,7 @@ function resolveLeagueGameResult(
     };
   }
 
-  const [firstSubmission, ...otherSubmissions] = submissions;
-  const isAgreement = otherSubmissions.every(
-    (submission) =>
-      submission.winner_team_id === firstSubmission.winner_team_id &&
-      submission.home_team_wins === firstSubmission.home_team_wins &&
-      submission.away_team_wins === firstSubmission.away_team_wins &&
-      gameScoresMatch(submission.game_scores, firstSubmission.game_scores) &&
-      submission.result_type === firstSubmission.result_type &&
-      submission.forfeiting_team_id === firstSubmission.forfeiting_team_id
-  );
-
-  if (!isAgreement) {
-    return {
-      winnerTeamId: null,
-      homeTeamWins: null,
-      awayTeamWins: null,
-      gameScores: null,
-      resultType: "standard" as const,
-      forfeitingTeamId: null
-    };
-  }
+  const [firstSubmission] = submissions;
 
   return {
     winnerTeamId: firstSubmission.winner_team_id,
