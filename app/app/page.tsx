@@ -360,7 +360,7 @@ export default async function AppPage({
                   <p className="mt-3 text-sm text-muted-foreground">
                     {currentMatchup.opponentSubmission
                       ? "Both teams have submitted a result. The first team’s report is final; any mismatch is flagged for admin review."
-                      : "One team report is enough to finalize the result and update standings. The other team can still submit a report."}
+                      : "Both teams should report the score so we can verify results and keep the standings fair."}
                   </p>
                 </div>
               ) : (

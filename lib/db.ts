@@ -1370,12 +1370,20 @@ function resolveLeagueGameResult(
   adminResult: LeagueGameResultRecord | undefined,
   submissions: LeagueGameSubmissionRecord[]
 ) {
+  const [firstSubmission] = submissions;
+
   if (adminResult?.winner_team_id) {
     return {
       winnerTeamId: adminResult.winner_team_id,
       homeTeamWins: adminResult.home_team_wins,
       awayTeamWins: adminResult.away_team_wins,
-      gameScores: adminResult.game_scores,
+      gameScores:
+        adminResult.game_scores ??
+        (firstSubmission?.winner_team_id === adminResult.winner_team_id &&
+        firstSubmission.home_team_wins === adminResult.home_team_wins &&
+        firstSubmission.away_team_wins === adminResult.away_team_wins
+          ? firstSubmission.game_scores
+          : null),
       resultType: adminResult.result_type,
       forfeitingTeamId: adminResult.forfeiting_team_id
     };
@@ -1391,8 +1399,6 @@ function resolveLeagueGameResult(
       forfeitingTeamId: null
     };
   }
-
-  const [firstSubmission] = submissions;
 
   return {
     winnerTeamId: firstSubmission.winner_team_id,
