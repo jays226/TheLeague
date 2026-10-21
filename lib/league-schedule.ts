@@ -38,6 +38,7 @@ export type SlotStandingsRow = {
   losses: number;
   forfeits: number;
   percentage: number;
+  scoreDifferential: number;
 };
 
 export type SlotStandings = {
@@ -530,7 +531,8 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
           wins: 0,
           losses: 0,
           forfeits: 0,
-          percentage: 0
+          percentage: 0,
+          scoreDifferential: 0
         });
       }
     }
@@ -552,6 +554,10 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
 
     slotStanding.teams.get(game.winnerTeamId)!.wins += 1;
     slotStanding.teams.get(loserTeamId)!.losses += 1;
+    for (const score of game.gameScores ?? []) {
+      slotStanding.teams.get(game.homeTeamId)!.scoreDifferential += score.home - score.away;
+      slotStanding.teams.get(game.awayTeamId)!.scoreDifferential += score.away - score.home;
+    }
     if (game.resultType === "forfeit" && game.forfeitingTeamId === loserTeamId) {
       slotStanding.teams.get(loserTeamId)!.forfeits += 1;
     }
@@ -573,6 +579,7 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
           (left, right) =>
             right.percentage - left.percentage ||
             right.wins - left.wins ||
+            right.scoreDifferential - left.scoreDifferential ||
             left.teamName.localeCompare(right.teamName)
         )
     }))

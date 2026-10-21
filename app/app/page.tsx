@@ -65,7 +65,10 @@ export default async function AppPage({
       slotStanding.teams.map((entry) => ({ ...entry, slotLabel: slotStanding.label, slotId: slotStanding.slotId }))
     )
     .sort((left, right) =>
-      right.percentage - left.percentage || right.wins - left.wins || left.teamName.localeCompare(right.teamName)
+      right.percentage - left.percentage ||
+      right.wins - left.wins ||
+      right.scoreDifferential - left.scoreDifferential ||
+      left.teamName.localeCompare(right.teamName)
     );
   const currentSlotStandings = activeReservation
     ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
@@ -420,20 +423,21 @@ export default async function AppPage({
                     </h2>
                   </div>
                   <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    Sorted by percentage
+                    Ranked by percentage, wins, then point differential
                   </span>
                 </div>
 
                 <div className="mt-5 overflow-hidden rounded-2xl border border-border/70">
-                  <div className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
+                  <div className="grid grid-cols-[1.5fr_0.45fr_0.45fr_0.65fr_0.75fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
                     <span>Team</span>
                     <span>W</span>
                     <span>L</span>
                     <span>Pct</span>
+                    <span>Diff</span>
                   </div>
                   {currentSlotStandings.teams.map((entry) => (
                     <div
-                      className="grid grid-cols-[1.6fr_0.6fr_0.6fr_0.8fr] border-t border-border/60 px-4 py-3 text-sm text-foreground"
+                      className="grid grid-cols-[1.5fr_0.45fr_0.45fr_0.65fr_0.75fr] border-t border-border/60 px-4 py-3 text-sm text-foreground"
                       key={`${currentSlotStandings.slotId}-${entry.teamName}`}
                     >
                       <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>
@@ -442,6 +446,7 @@ export default async function AppPage({
                       <span>{entry.wins}</span>
                       <span>{entry.losses}</span>
                       <span>{entry.percentage.toFixed(3)}</span>
+                      <span>{entry.scoreDifferential > 0 ? `+${entry.scoreDifferential}` : entry.scoreDifferential}</span>
                     </div>
                   ))}
                 </div>
@@ -525,23 +530,23 @@ export default async function AppPage({
                   </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  Sorted by percentage
+                  Ranked by percentage, wins, then point differential
                 </span>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                Standings update as match results are recorded. Ties in percentage are broken by wins,
-                then alphabetically.
+                Point differential is points scored minus points allowed. Rankings use win percentage,
+                then wins, then point differential.
               </p>
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-border/70">
-                <div className="grid grid-cols-[0.4fr_1.5fr_1fr_0.5fr_0.5fr_0.7fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
-                  <span>#</span><span>Team</span><span>Slot</span><span>W</span><span>L</span><span>Pct</span>
+                <div className="grid grid-cols-[0.35fr_1.4fr_1fr_0.45fr_0.45fr_0.65fr_0.65fr] bg-secondary/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/75">
+                  <span>#</span><span>Team</span><span>Slot</span><span>W</span><span>L</span><span>Pct</span><span>Diff</span>
                 </div>
                 {overallStandings.map((entry, index) => (
-                  <div className="grid grid-cols-[0.4fr_1.5fr_1fr_0.5fr_0.5fr_0.7fr] border-t border-border/60 px-4 py-3 text-sm text-foreground" key={`${entry.slotId}-${entry.teamName}`}>
+                  <div className="grid grid-cols-[0.35fr_1.4fr_1fr_0.45fr_0.45fr_0.65fr_0.65fr] border-t border-border/60 px-4 py-3 text-sm text-foreground" key={`${entry.slotId}-${entry.teamName}`}>
                     <span>{index + 1}</span>
                     <span className={entry.teamName === team.team_name ? "font-semibold text-primary" : ""}>{entry.teamName}</span>
-                    <span>{entry.slotLabel}</span><span>{entry.wins}</span><span>{entry.losses}</span><span>{entry.percentage.toFixed(3)}</span>
+                    <span>{entry.slotLabel}</span><span>{entry.wins}</span><span>{entry.losses}</span><span>{entry.percentage.toFixed(3)}</span><span>{entry.scoreDifferential > 0 ? `+${entry.scoreDifferential}` : entry.scoreDifferential}</span>
                   </div>
                 ))}
               </div>

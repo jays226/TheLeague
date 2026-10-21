@@ -15,6 +15,7 @@ import {
 import { recurringSlots } from "@/lib/slots";
 import { ACTIVE_SEASON_ID } from "@/lib/seasons";
 import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
+import { gameScoresMatch } from "@/lib/game-scores";
 
 if (!env.databaseUrl) {
   throw new Error("Missing DATABASE_URL. Supabase/Postgres is required for this deployment.");
@@ -1398,7 +1399,7 @@ function resolveLeagueGameResult(
       submission.winner_team_id === firstSubmission.winner_team_id &&
       submission.home_team_wins === firstSubmission.home_team_wins &&
       submission.away_team_wins === firstSubmission.away_team_wins &&
-      JSON.stringify(submission.game_scores ?? null) === JSON.stringify(firstSubmission.game_scores ?? null) &&
+      gameScoresMatch(submission.game_scores, firstSubmission.game_scores) &&
       submission.result_type === firstSubmission.result_type &&
       submission.forfeiting_team_id === firstSubmission.forfeiting_team_id
   );

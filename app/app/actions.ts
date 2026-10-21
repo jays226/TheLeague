@@ -14,6 +14,7 @@ import {
 } from "@/lib/db";
 import { submitLeagueGameResult } from "@/lib/db";
 import { getApplicationNow, getLeagueGameWindow } from "@/lib/eastern-time";
+import { gameScoresMatch } from "@/lib/game-scores";
 import { sendScoreMismatchAlert } from "@/lib/email-notifications";
 import { createId, leagueCookieName } from "@/lib/session";
 
@@ -137,7 +138,7 @@ function submissionsMatch(
     left.winnerTeamId === right.winner_team_id &&
     left.homeTeamWins === right.home_team_wins &&
     left.awayTeamWins === right.away_team_wins &&
-    JSON.stringify(left.gameScores) === JSON.stringify(right.game_scores) &&
+    gameScoresMatch(left.gameScores, right.game_scores) &&
     left.resultType === right.result_type &&
     left.forfeitingTeamId === right.forfeiting_team_id
   );
