@@ -226,6 +226,12 @@ export default async function AdminPage({
             >
               Weekly games
             </Link>
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-white/75 px-5 text-sm font-semibold text-foreground transition hover:bg-white"
+              href="/admin/dupr"
+            >
+              DUPR entry list
+            </Link>
             <form action={logoutAction}>
               <button
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
