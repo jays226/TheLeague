@@ -23,6 +23,7 @@ export default async function AdminDuprPage() {
 
   const [games, teams] = await Promise.all([listLeagueGames(), listTeamsWithReservations()]);
   const teamById = new Map(teams.map((team) => [team.id, team]));
+  const weeks = [...new Set(games.map((game) => game.week))].sort((left, right) => left - right);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f3eb_0%,#eef3ee_100%)] px-5 py-8 sm:px-8">
@@ -38,13 +39,24 @@ export default async function AdminDuprPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
-              download
-              href="/api/admin/dupr/export"
-            >
-              Download CSV
-            </a>
+            <form action="/api/admin/dupr/export" className="flex flex-wrap gap-2" method="get">
+              <label className="sr-only" htmlFor="dupr-export-week">Week to download</label>
+              <select
+                className="h-11 rounded-xl border border-border bg-white/85 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+                defaultValue="all"
+                id="dupr-export-week"
+                name="week"
+              >
+                <option value="all">All weeks</option>
+                {weeks.map((week) => <option key={week} value={week}>Week {week}</option>)}
+              </select>
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+                type="submit"
+              >
+                Download CSV
+              </button>
+            </form>
             <Link
               className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
               href="/admin"

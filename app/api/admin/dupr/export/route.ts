@@ -11,7 +11,7 @@ function csvCell(value: string | number | null | undefined) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(adminCookieName)?.value;
 
@@ -26,7 +26,15 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [games, teams] = await Promise.all([listLeagueGames(), listTeamsWithReservations()]);
+  const requestedWeek = new URL(request.url).searchParams.get("week");
+  const [allGames, teams] = await Promise.all([listLeagueGames(), listTeamsWithReservations()]);
+  const week = requestedWeek && requestedWeek !== "all" ? Number(requestedWeek) : null;
+
+  if (week !== null && (!Number.isInteger(week) || !allGames.some((game) => game.week === week))) {
+    return NextResponse.json({ error: "Invalid week" }, { status: 400 });
+  }
+
+  const games = week === null ? allGames : allGames.filter((game) => game.week === week);
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const header = [
     "Week",
@@ -90,7 +98,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="the-league-dupr-matches.csv"',
+      "Content-Disposition": `attachment; filename="the-league-dupr-${week === null ? "all-weeks" : `week-${week}`}.csv"`,
       "Cache-Control": "private, no-store"
     }
   });
