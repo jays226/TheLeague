@@ -37,12 +37,21 @@ export default async function AdminDuprPage() {
               All scheduled matches in week order, with player DUPR IDs and individual game scores in home–away order.
             </p>
           </div>
-          <Link
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
-            href="/admin"
-          >
-            Back to admin
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <a
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+              download
+              href="/api/admin/dupr/export"
+            >
+              Download CSV
+            </a>
+            <Link
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-semibold text-secondary-foreground transition hover:bg-[hsl(42_40%_86%)]"
+              href="/admin"
+            >
+              Back to admin
+            </Link>
+          </div>
         </header>
 
         <Card className="overflow-hidden">
