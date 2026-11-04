@@ -167,6 +167,9 @@ export default async function AdminPage({
       ])
     )
   });
+  const playoffEligibleTeamIds = new Set(
+    playoffSeeds.filter((seed) => seed.forfeits <= 1).map((seed) => seed.teamId)
+  );
   const playoffEmails = [
     ...new Set(
       playoffField.flatMap((seed) => {
@@ -469,7 +472,7 @@ export default async function AdminPage({
                         >
                           <option value="">No team</option>
                           {teams
-                            .filter((team) => !team.is_waitlist)
+                            .filter((team) => !team.is_waitlist && playoffEligibleTeamIds.has(team.id))
                             .sort((left, right) => left.team_name.localeCompare(right.team_name))
                             .map((team) => (
                               <option key={team.id} value={team.id}>

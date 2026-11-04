@@ -62,14 +62,26 @@ export default async function AppPage({
   const standings = await listLeagueStandings();
   const overallStandings = standings
     .flatMap((slotStanding) =>
-      slotStanding.teams.map((entry) => ({ ...entry, slotLabel: slotStanding.label, slotId: slotStanding.slotId }))
+      slotStanding.teams.map((entry, slotRank) => ({
+        ...entry,
+        slotLabel: slotStanding.label,
+        slotId: slotStanding.slotId,
+        slotRank
+      }))
     )
-    .sort((left, right) =>
-      right.percentage - left.percentage ||
-      right.wins - left.wins ||
-      right.scoreDifferential - left.scoreDifferential ||
-      left.teamName.localeCompare(right.teamName)
-    );
+    .sort((left, right) => {
+      const sameRecord = left.wins === right.wins && left.losses === right.losses;
+      const sameSlot = left.slotId === right.slotId;
+
+      return (
+        right.percentage - left.percentage ||
+        right.wins - left.wins ||
+        (sameRecord && sameSlot ? left.slotRank - right.slotRank : 0) ||
+        right.scoreDifferential - left.scoreDifferential ||
+        right.pointsScored - left.pointsScored ||
+        left.teamName.localeCompare(right.teamName)
+      );
+    });
   const currentSlotStandings = activeReservation
     ? standings.find((entry) => entry.slotId === activeReservation.slot_id)
     : undefined;
@@ -423,7 +435,7 @@ export default async function AppPage({
                     </h2>
                   </div>
                   <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    Ranked by percentage, wins, then point differential
+                    Win-loss, head-to-head, adjusted diff, points scored
                   </span>
                 </div>
 
@@ -530,12 +542,11 @@ export default async function AppPage({
                   </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  Ranked by percentage, wins, then point differential
+                  Win-loss, head-to-head, adjusted diff, points scored
                 </span>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                Point differential is points scored minus points allowed. Rankings use win percentage,
-                then wins, then point differential.
+                Adjusted point differential is points scored minus points allowed in played matches, less 11 points per forfeit. Rankings use win-loss record, head-to-head for two-team ties, adjusted differential, then points scored.
               </p>
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-border/70">
