@@ -63,12 +63,6 @@ function sameQualificationMetrics(left: PlayoffQualificationRow, right: PlayoffQ
   return sameWinPercentage && sameAverageDifferential && left.pointsScored === right.pointsScored;
 }
 
-function orderTiedRows(rows: PlayoffQualificationRow[]) {
-  return [...rows].sort(
-    (left, right) => left.teamName.localeCompare(right.teamName) || left.teamId.localeCompare(right.teamId)
-  );
-}
-
 function markCutlineTiePending(rows: PlayoffQualificationRow[], cutIndex: number) {
   if (cutIndex < 0 || cutIndex >= rows.length - 1 || !sameQualificationMetrics(rows[cutIndex], rows[cutIndex + 1])) {
     return false;
@@ -182,7 +176,12 @@ export function seedPlayoffQualifiers(rows: PlayoffQualificationRow[]) {
 
   if (qualifiers.length !== 16 || rows.some((row) => row.status === "pending_review")) return [];
 
-  return orderTiedRows(qualifiers.sort((left, right) => compareMetric(left, right))).map((row, index) => ({
+  return qualifiers.sort((left, right) =>
+    right.winPercentage - left.winPercentage ||
+    right.adjustedPointDifferential - left.adjustedPointDifferential ||
+    left.teamName.localeCompare(right.teamName) ||
+    left.teamId.localeCompare(right.teamId)
+  ).map((row, index) => ({
     seed: index + 1,
     overallSeed: index + 1,
     teamId: row.teamId,
