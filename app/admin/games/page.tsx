@@ -123,8 +123,10 @@ export default async function AdminGamesPage({
                     ) : null}
                   </div>
                   <div className="rounded-2xl bg-secondary/80 px-4 py-3 text-sm text-foreground">
-                    {game.winnerTeamId
-                      ? `Current recorded result: ${
+                    {game.resultType === "double_forfeit"
+                      ? "Both teams forfeited"
+                      : game.winnerTeamId
+                        ? `Current recorded result: ${
                           game.homeTeamWins !== null && game.awayTeamWins !== null
                             ? `${game.homeTeamWins}-${game.awayTeamWins}${
                                 game.resultType === "forfeit"
@@ -141,7 +143,7 @@ export default async function AdminGamesPage({
                               ? `${game.homeTeamName} win`
                               : `${game.awayTeamName} win`
                         }${game.gameScores?.length ? ` · Games: ${game.gameScores.map((score) => `${score.home}-${score.away}`).join(", ")}` : ""}`
-                      : "No final result recorded yet"}
+                        : "No final result recorded yet"}
                   </div>
                 </div>
 
@@ -322,15 +324,18 @@ export default async function AdminGamesPage({
                     <select
                       className="h-11 min-w-48 rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                       defaultValue={
-                        game.resultType === "forfeit" && game.forfeitingTeamId
-                          ? game.forfeitingTeamId
-                          : ""
+                        game.resultType === "double_forfeit"
+                          ? "both"
+                          : game.resultType === "forfeit" && game.forfeitingTeamId
+                            ? game.forfeitingTeamId
+                            : ""
                       }
                       name="forfeitingTeamId"
                     >
                       <option value="">No forfeit</option>
                       <option value={game.homeTeamId}>{game.homeTeamName} forfeited</option>
                       <option value={game.awayTeamId}>{game.awayTeamName} forfeited</option>
+                      <option value="both">Both teams forfeited</option>
                     </select>
                     <button
                       className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"

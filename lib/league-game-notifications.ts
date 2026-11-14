@@ -26,7 +26,7 @@ export async function processLeagueGameNotifications(now = new Date()) {
   };
 
   for (const game of games) {
-    const existingResult = Boolean(game.winnerTeamId);
+    const existingResult = Boolean(game.winnerTeamId) || game.resultType === "double_forfeit";
     const homeSubmission = game.submissions.find(
       (submission) => submission.submitting_team_id === game.homeTeamId
     );

@@ -98,9 +98,11 @@ export default async function AdminDuprPage() {
                       ) : <span className="text-muted-foreground">Player details unavailable</span>;
                     const scoreText = game.gameScores?.length
                       ? game.gameScores.map((score) => `${score.home}-${score.away}`).join(", ")
-                      : game.resultType === "forfeit" && game.winnerTeamId
-                        ? `Forfeit · ${game.homeTeamWins}-${game.awayTeamWins}`
-                        : "No individual scores reported";
+                      : game.resultType === "double_forfeit"
+                        ? "Both teams forfeited"
+                        : game.resultType === "forfeit" && game.winnerTeamId
+                          ? `Forfeit · ${game.homeTeamWins}-${game.awayTeamWins}`
+                          : "No individual scores reported";
 
                     return (
                       <tr className="border-t border-border/60 align-top even:bg-white/35" key={`${game.slotId}-${game.week}-${game.homeTeamId}-${game.awayTeamId}`}>

@@ -22,7 +22,7 @@ export type GeneratedLeagueGame = {
 export type LeagueGameWithResult = GeneratedLeagueGame & {
   winnerTeamId: string | null;
   gameScores?: Array<{ home: number; away: number }> | null;
-  resultType?: "standard" | "forfeit";
+  resultType?: "standard" | "forfeit" | "double_forfeit";
   forfeitingTeamId?: string | null;
 };
 
@@ -65,6 +65,7 @@ export type PlayoffSeedRow = {
 
 export type QualifiedPlayoffSeedRow = PlayoffSeedRow & {
   overallSeed: number;
+  qualificationType?: "automatic_qualifier" | "wild_card";
 };
 
 export type PlayoffSeedOverrideInput = {
@@ -101,6 +102,8 @@ export type PlayoffBracketMatchId =
 export type PlayoffBracketResultInput = {
   matchupId: PlayoffBracketMatchId;
   winnerTeamId: string;
+  homeGamesWon?: number | null;
+  awayGamesWon?: number | null;
 };
 
 export type PlayoffBracketPlaceholder = {
@@ -117,6 +120,8 @@ export type PlayoffBracketMatchup = {
   bottom: PlayoffBracketEntry;
   winner: PlayoffBracketEntry | null;
   winnerTeamId: string | null;
+  homeGamesWon: number | null;
+  awayGamesWon: number | null;
   canPickWinner: boolean;
 };
 
@@ -374,7 +379,7 @@ function createBracketDefinitions(hasPlayIns: boolean) {
 function resolveBracketMatchups(input: {
   definitions: BracketDefinition[];
   seedsByNumber: Map<number, QualifiedPlayoffSeedRow>;
-  resultByMatchId: Map<PlayoffBracketMatchId, string>;
+  resultByMatchId: Map<PlayoffBracketMatchId, PlayoffBracketResultInput>;
   winnersByMatchId: Map<PlayoffBracketMatchId, QualifiedPlayoffSeedRow>;
 }) {
   return input.definitions.map((definition) => {
@@ -390,7 +395,18 @@ function resolveBracketMatchups(input: {
     });
     const topTeamId = "teamId" in top ? top.teamId : null;
     const bottomTeamId = "teamId" in bottom ? bottom.teamId : null;
-    const winnerTeamId = input.resultByMatchId.get(definition.id) ?? null;
+    const result = input.resultByMatchId.get(definition.id);
+    const homeGamesWon = result?.homeGamesWon;
+    const awayGamesWon = result?.awayGamesWon;
+    const resultIsFinal = Boolean(
+      result &&
+      typeof homeGamesWon === "number" && Number.isInteger(homeGamesWon) &&
+      typeof awayGamesWon === "number" && Number.isInteger(awayGamesWon) &&
+      homeGamesWon >= 0 && awayGamesWon >= 0 &&
+      (homeGamesWon === 2 || awayGamesWon === 2) &&
+      homeGamesWon + awayGamesWon >= 2 && homeGamesWon + awayGamesWon <= 3
+    );
+    const winnerTeamId = resultIsFinal ? result!.winnerTeamId : null;
     const winner =
       winnerTeamId && topTeamId === winnerTeamId
         ? top
@@ -409,6 +425,8 @@ function resolveBracketMatchups(input: {
       bottom,
       winner,
       winnerTeamId,
+      homeGamesWon: resultIsFinal ? homeGamesWon ?? null : null,
+      awayGamesWon: resultIsFinal ? awayGamesWon ?? null : null,
       canPickWinner: Boolean(topTeamId && bottomTeamId)
     } satisfies PlayoffBracketMatchup;
   });
@@ -513,6 +531,7 @@ function buildHeadToHeadWins(games: LeagueGameWithResult[]) {
   const winsByPair = new Map<string, Map<string, number>>();
 
   for (const game of games) {
+    if (game.resultType === "double_forfeit") continue;
     if (!game.winnerTeamId || (game.winnerTeamId !== game.homeTeamId && game.winnerTeamId !== game.awayTeamId)) {
       continue;
     }
@@ -642,6 +661,14 @@ export function buildStandingsFromGames(games: LeagueGameWithResult[]) {
           scoreDifferential: 0
         });
       }
+    }
+
+    if (game.resultType === "double_forfeit") {
+      slotStanding.teams.get(game.homeTeamId)!.losses += 1;
+      slotStanding.teams.get(game.awayTeamId)!.losses += 1;
+      slotStanding.teams.get(game.homeTeamId)!.forfeits += 1;
+      slotStanding.teams.get(game.awayTeamId)!.forfeits += 1;
+      continue;
     }
 
     if (!game.winnerTeamId || (game.winnerTeamId !== game.homeTeamId && game.winnerTeamId !== game.awayTeamId)) {
@@ -830,7 +857,7 @@ export function buildPlayoffBracket(input: {
   const hasPlayIns = field.length >= 18;
   const seedsByNumber = new Map(field.map((seed) => [seed.seed, seed]));
   const resultByMatchId = new Map(
-    (input.results ?? []).map((result) => [result.matchupId, result.winnerTeamId])
+    (input.results ?? []).map((result) => [result.matchupId, result])
   );
   const winnersByMatchId = new Map<PlayoffBracketMatchId, QualifiedPlayoffSeedRow>();
   const definitions = createBracketDefinitions(hasPlayIns);

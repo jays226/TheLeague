@@ -15,6 +15,9 @@ import {
 import { recurringSlots } from "@/lib/slots";
 import { ACTIVE_SEASON_ID } from "@/lib/seasons";
 import { getPlayerFeeCents, type PlayerType } from "@/lib/pricing";
+import type { PlayoffQualificationOverride } from "@/lib/playoff-qualification";
+import type { PlayoffQualificationRow } from "@/lib/playoff-qualification";
+import type { QualifiedPlayoffSeedRow } from "@/lib/league-schedule";
 
 if (!env.databaseUrl) {
   throw new Error("Missing DATABASE_URL. Supabase/Postgres is required for this deployment.");
@@ -355,10 +358,14 @@ async function ensureBootstrap() {
         CREATE TABLE IF NOT EXISTS playoff_game_results (
           matchup_id text PRIMARY KEY,
           winner_team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          home_games_won integer,
+          away_games_won integer,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await pool.query(`ALTER TABLE playoff_game_results ADD COLUMN IF NOT EXISTS home_games_won integer`);
+      await pool.query(`ALTER TABLE playoff_game_results ADD COLUMN IF NOT EXISTS away_games_won integer`);
       await pool.query(`
         UPDATE playoff_game_results
         SET matchup_id = 'spring-2026:' || matchup_id
@@ -417,6 +424,18 @@ async function ensureBootstrap() {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_playoff_seed_overrides_team_id
         ON playoff_seed_overrides (team_id)
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS playoff_tournament_states (
+          season_id text PRIMARY KEY REFERENCES league_seasons(id) ON DELETE CASCADE,
+          qualification_overrides jsonb NOT NULL DEFAULT '[]'::jsonb,
+          qualification_snapshot jsonb,
+          bracket_snapshot jsonb,
+          is_published boolean NOT NULL DEFAULT false,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`ALTER TABLE playoff_tournament_states ADD COLUMN IF NOT EXISTS qualification_snapshot jsonb`);
 
       await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_email_list_signups_email_unique
@@ -549,7 +568,7 @@ export type LeagueGameResultRecord = {
   winner_team_id: string | null;
   home_team_wins: number | null;
   away_team_wins: number | null;
-  result_type: "standard" | "forfeit";
+  result_type: "standard" | "forfeit" | "double_forfeit";
   forfeiting_team_id: string | null;
   game_scores: Array<{ home: number; away: number }> | null;
   created_at: string;
@@ -605,7 +624,7 @@ export type LeagueGameRecord = LeagueGameWithResult & {
   id?: string;
   homeTeamWins: number | null;
   awayTeamWins: number | null;
-  resultType: "standard" | "forfeit";
+  resultType: "standard" | "forfeit" | "double_forfeit";
   forfeitingTeamId: string | null;
   gameScores: Array<{ home: number; away: number }> | null;
   submissions: LeagueGameSubmissionRecord[];
@@ -628,7 +647,18 @@ export type PlayoffSeedOverrideRecord = {
 export type PlayoffGameResultRecord = {
   matchup_id: PlayoffBracketMatchId;
   winner_team_id: string;
+  home_games_won: number | null;
+  away_games_won: number | null;
   created_at: string;
+  updated_at: string;
+};
+
+export type PlayoffTournamentStateRecord = {
+  season_id: string;
+  qualification_overrides: PlayoffQualificationOverride[];
+  qualification_snapshot: PlayoffQualificationRow[] | null;
+  bracket_snapshot: QualifiedPlayoffSeedRow[] | null;
+  is_published: boolean;
   updated_at: string;
 };
 
@@ -925,10 +955,95 @@ export async function savePlayoffSeedOverrides(overrides: Array<{ seed: number; 
   });
 }
 
+export async function getPlayoffTournamentState() {
+  const rows = await query<PlayoffTournamentStateRecord>(
+    `SELECT * FROM playoff_tournament_states WHERE season_id = $1 LIMIT 1`,
+    [ACTIVE_SEASON_ID]
+  );
+  return rows[0] ?? {
+    season_id: ACTIVE_SEASON_ID,
+    qualification_overrides: [],
+    qualification_snapshot: null,
+    bracket_snapshot: null,
+    is_published: false,
+    updated_at: new Date(0).toISOString()
+  };
+}
+
+export async function savePlayoffQualificationOverrides(overrides: PlayoffQualificationOverride[]) {
+  await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${ACTIVE_SEASON_ID}:playoffs`]);
+    await client.query("DELETE FROM playoff_game_results WHERE matchup_id LIKE $1", [`${ACTIVE_SEASON_ID}:%`]);
+    await client.query(
+      `
+        INSERT INTO playoff_tournament_states (season_id, qualification_overrides, qualification_snapshot, bracket_snapshot, is_published, updated_at)
+        VALUES ($1, $2::jsonb, NULL, NULL, false, now())
+        ON CONFLICT (season_id)
+        DO UPDATE SET
+          qualification_overrides = EXCLUDED.qualification_overrides,
+          qualification_snapshot = NULL,
+          bracket_snapshot = NULL,
+          is_published = false,
+          updated_at = now()
+      `,
+      [ACTIVE_SEASON_ID, JSON.stringify(overrides)]
+    );
+  });
+}
+
+export async function saveGeneratedPlayoffBracket(
+  seeds: QualifiedPlayoffSeedRow[],
+  qualification: PlayoffQualificationRow[]
+) {
+  await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${ACTIVE_SEASON_ID}:playoffs`]);
+    await client.query("DELETE FROM playoff_game_results WHERE matchup_id LIKE $1", [`${ACTIVE_SEASON_ID}:%`]);
+    await client.query(
+      `
+        INSERT INTO playoff_tournament_states (season_id, qualification_snapshot, bracket_snapshot, is_published, updated_at)
+        VALUES ($1, $2::jsonb, $3::jsonb, false, now())
+        ON CONFLICT (season_id)
+        DO UPDATE SET qualification_snapshot = EXCLUDED.qualification_snapshot, bracket_snapshot = EXCLUDED.bracket_snapshot, is_published = false, updated_at = now()
+      `,
+      [ACTIVE_SEASON_ID, JSON.stringify(qualification), JSON.stringify(seeds)]
+    );
+  });
+}
+
+export async function publishPlayoffBracket() {
+  const rows = await query<{ season_id: string }>(
+    `
+      UPDATE playoff_tournament_states
+      SET is_published = true, updated_at = now()
+      WHERE season_id = $1 AND jsonb_array_length(bracket_snapshot) = 16
+      RETURNING season_id
+    `,
+    [ACTIVE_SEASON_ID]
+  );
+  if (!rows[0]) throw new Error("Generate a complete 16-team bracket before publishing.");
+}
+
+export async function resetPlayoffBracket() {
+  await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${ACTIVE_SEASON_ID}:playoffs`]);
+    await client.query("DELETE FROM playoff_game_results WHERE matchup_id LIKE $1", [`${ACTIVE_SEASON_ID}:%`]);
+    await client.query(
+      `
+        INSERT INTO playoff_tournament_states (season_id, qualification_snapshot, bracket_snapshot, is_published, updated_at)
+        VALUES ($1, NULL, NULL, false, now())
+        ON CONFLICT (season_id)
+        DO UPDATE SET qualification_snapshot = NULL, bracket_snapshot = NULL, is_published = false, updated_at = now()
+      `,
+      [ACTIVE_SEASON_ID]
+    );
+  });
+}
+
 export async function listPlayoffGameResults() {
   return query<PlayoffGameResultRecord>(
     `
-      SELECT substring(matchup_id from length($1) + 2) AS matchup_id, winner_team_id, created_at, updated_at
+      SELECT substring(matchup_id from length($1) + 2) AS matchup_id, winner_team_id,
+        home_games_won, away_games_won, created_at, updated_at
       FROM playoff_game_results
       WHERE matchup_id LIKE $2
       ORDER BY created_at ASC
@@ -940,23 +1055,55 @@ export async function listPlayoffGameResults() {
 export async function savePlayoffGameResult(input: {
   matchupId: PlayoffBracketMatchId;
   winnerTeamId: string | null;
+  homeGamesWon: number | null;
+  awayGamesWon: number | null;
 }) {
-  if (!input.winnerTeamId) {
-    await query("DELETE FROM playoff_game_results WHERE matchup_id = $1", [`${ACTIVE_SEASON_ID}:${input.matchupId}`]);
-    return;
-  }
+  const downstreamMatchups: Partial<Record<PlayoffBracketMatchId, PlayoffBracketMatchId[]>> = {
+    "r16-a": ["qf-1", "sf-1", "sf-2", "final"],
+    "r16-b": ["qf-1", "sf-1", "sf-2", "final"],
+    "r16-c": ["qf-2", "sf-1", "sf-2", "final"],
+    "r16-d": ["qf-2", "sf-1", "sf-2", "final"],
+    "r16-e": ["qf-3", "sf-1", "sf-2", "final"],
+    "r16-f": ["qf-3", "sf-1", "sf-2", "final"],
+    "r16-g": ["qf-4", "sf-1", "sf-2", "final"],
+    "r16-h": ["qf-4", "sf-1", "sf-2", "final"],
+    "qf-1": ["sf-1", "final"],
+    "qf-2": ["sf-1", "final"],
+    "qf-3": ["sf-2", "final"],
+    "qf-4": ["sf-2", "final"],
+    "sf-1": ["final"],
+    "sf-2": ["final"]
+  };
+  const resultId = `${ACTIVE_SEASON_ID}:${input.matchupId}`;
 
-  await query(
-    `
-      INSERT INTO playoff_game_results (matchup_id, winner_team_id, created_at, updated_at)
-      VALUES ($1, $2, now(), now())
-      ON CONFLICT (matchup_id)
-      DO UPDATE SET
-        winner_team_id = EXCLUDED.winner_team_id,
-        updated_at = now()
-    `,
-    [`${ACTIVE_SEASON_ID}:${input.matchupId}`, input.winnerTeamId]
-  );
+  await withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${ACTIVE_SEASON_ID}:playoffs`]);
+    const downstreamIds = (downstreamMatchups[input.matchupId] ?? []).map((id) => `${ACTIVE_SEASON_ID}:${id}`);
+    if (downstreamIds.length) {
+      await client.query("DELETE FROM playoff_game_results WHERE matchup_id = ANY($1::text[])", [downstreamIds]);
+    }
+
+    if (!input.winnerTeamId) {
+      await client.query("DELETE FROM playoff_game_results WHERE matchup_id = $1", [resultId]);
+      return;
+    }
+
+    await client.query(
+      `
+        INSERT INTO playoff_game_results (
+          matchup_id, winner_team_id, home_games_won, away_games_won, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, now(), now())
+        ON CONFLICT (matchup_id)
+        DO UPDATE SET
+          winner_team_id = EXCLUDED.winner_team_id,
+          home_games_won = EXCLUDED.home_games_won,
+          away_games_won = EXCLUDED.away_games_won,
+          updated_at = now()
+      `,
+      [resultId, input.winnerTeamId, input.homeGamesWon, input.awayGamesWon]
+    );
+  });
 }
 
 export async function approveTeamPayment(teamId: string) {
@@ -1372,6 +1519,17 @@ function resolveLeagueGameResult(
 ) {
   const [firstSubmission] = submissions;
 
+  if (adminResult?.result_type === "double_forfeit") {
+    return {
+      winnerTeamId: null,
+      homeTeamWins: 0,
+      awayTeamWins: 0,
+      gameScores: null,
+      resultType: "double_forfeit" as const,
+      forfeitingTeamId: null
+    };
+  }
+
   if (adminResult?.winner_team_id) {
     return {
       winnerTeamId: adminResult.winner_team_id,
@@ -1532,11 +1690,14 @@ export async function saveLeagueGameResult(input: {
   winnerTeamId: string | null;
   homeTeamWins?: number | null;
   awayTeamWins?: number | null;
-  resultType?: "standard" | "forfeit";
+  resultType?: "standard" | "forfeit" | "double_forfeit";
   forfeitingTeamId?: string | null;
   gameScores?: Array<{ home: number; away: number }> | null;
 }) {
-  if (!input.winnerTeamId) {
+  const winnerTeamId = input.winnerTeamId ??
+    (input.resultType === "double_forfeit" ? input.homeTeamId : null);
+
+  if (!winnerTeamId) {
     await query(
       `
         DELETE FROM game_results
@@ -1550,7 +1711,7 @@ export async function saveLeagueGameResult(input: {
     return;
   }
 
-  if (input.winnerTeamId !== input.homeTeamId && input.winnerTeamId !== input.awayTeamId) {
+  if (winnerTeamId !== input.homeTeamId && winnerTeamId !== input.awayTeamId) {
     throw new Error("Winner must be one of the scheduled teams.");
   }
 
@@ -1589,9 +1750,9 @@ export async function saveLeagueGameResult(input: {
       input.matchDate,
       input.homeTeamId,
       input.awayTeamId,
-      input.winnerTeamId,
-      input.homeTeamWins ?? null,
-      input.awayTeamWins ?? null,
+      winnerTeamId,
+      input.resultType === "double_forfeit" ? 0 : input.homeTeamWins ?? null,
+      input.resultType === "double_forfeit" ? 0 : input.awayTeamWins ?? null,
       input.resultType ?? "standard",
       input.forfeitingTeamId ?? null,
       input.gameScores ? JSON.stringify(input.gameScores) : null

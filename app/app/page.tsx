@@ -108,10 +108,14 @@ export default async function AppPage({
       const rightTime = right.opensAt.getTime();
       return leftTime - rightTime;
     });
-  const reportableGames = decoratedSchedule.filter((game) => game.canSubmitNow);
+  const reportableGames = decoratedSchedule.filter(
+    (game) => game.canSubmitNow && game.resultType !== "double_forfeit"
+  );
   const currentMatchup =
     reportableGames[0] ??
-    decoratedSchedule.find((game) => game.closesAt >= now && !game.winnerTeamId) ??
+    decoratedSchedule.find(
+      (game) => game.closesAt >= now && !game.winnerTeamId && game.resultType !== "double_forfeit"
+    ) ??
     decoratedSchedule[0];
   const opponentTeam =
     currentMatchup
@@ -347,7 +351,9 @@ export default async function AppPage({
                   ) : null}
 
                   <p className="mt-4 text-sm text-muted-foreground">
-                    {currentMatchup.canSubmitNow
+                    {currentMatchup.resultType === "double_forfeit"
+                      ? "Both teams forfeited this matchup."
+                      : currentMatchup.canSubmitNow
                       ? "Score reporting is open for this matchup until 11:59 PM tonight."
                       : "The Log score button will activate when your match time begins."}
                   </p>
@@ -362,7 +368,7 @@ export default async function AppPage({
                     currentTeamId={team.id}
                     homeTeamId={currentMatchup.homeTeamId}
                     homeTeamName={currentMatchup.homeTeamName}
-                    isOpen={currentMatchup.canSubmitNow}
+                    isOpen={currentMatchup.canSubmitNow && currentMatchup.resultType !== "double_forfeit"}
                     matchDate={currentMatchup.matchDate}
                     slotId={currentMatchup.slotId}
                     timeLabel={currentMatchup.timeLabel}
@@ -509,7 +515,9 @@ export default async function AppPage({
                       ) : null}
                     </div>
                     <p className="mt-4 text-sm font-medium text-primary">
-                      {game.winnerTeamId
+                      {game.resultType === "double_forfeit"
+                        ? "Recorded result: Both teams forfeited"
+                        : game.winnerTeamId
                         ? `Recorded result: ${
                             game.homeTeamWins !== null && game.awayTeamWins !== null
                               ? `${game.homeTeamWins}-${game.awayTeamWins}${

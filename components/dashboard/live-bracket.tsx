@@ -5,6 +5,7 @@ import {
   type PlayoffBracketResultInput,
   type QualifiedPlayoffSeedRow
 } from "@/lib/league-schedule";
+import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { cn } from "@/lib/utils";
 
 type LiveBracketProps = {
@@ -93,6 +94,7 @@ function MatchupAdminControls({
   }
 
   const options = [matchup.top, matchup.bottom].filter(isSeed);
+  const isEditing = matchup.winnerTeamId !== null;
 
   return (
     <form action={saveResultAction} className="mt-3 space-y-3 rounded-xl bg-white/85 p-3">
@@ -114,12 +116,49 @@ function MatchupAdminControls({
           ))}
         </select>
       </div>
-      <button
-        className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
-        type="submit"
-      >
-        Save winner
-      </button>
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/65">
+          Match score (games won)
+        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            aria-label="Top team games won"
+            className="h-10 w-20 rounded-xl border border-border bg-white px-3 text-sm"
+            defaultValue={matchup.homeGamesWon ?? ""}
+            max={2}
+            min={0}
+            name="homeGamesWon"
+            required
+            type="number"
+          />
+          <span>–</span>
+          <input
+            aria-label="Bottom team games won"
+            className="h-10 w-20 rounded-xl border border-border bg-white px-3 text-sm"
+            defaultValue={matchup.awayGamesWon ?? ""}
+            max={2}
+            min={0}
+            name="awayGamesWon"
+            required
+            type="number"
+          />
+        </div>
+      </div>
+      {isEditing ? (
+        <ConfirmSubmitButton
+          className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+          confirmation="Edit this result? Any saved results in later rounds will be cleared."
+        >
+          Update result
+        </ConfirmSubmitButton>
+      ) : (
+        <button
+          className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-[hsl(151_58%_18%)]"
+          type="submit"
+        >
+          Save result
+        </button>
+      )}
     </form>
   );
 }
@@ -159,6 +198,11 @@ function MatchupCard({
             {winnerId ? (
               <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
                 Winner locked
+              </span>
+            ) : null}
+            {matchup.homeGamesWon !== null && matchup.awayGamesWon !== null ? (
+              <span className="text-xs font-semibold text-foreground">
+                {matchup.homeGamesWon}-{matchup.awayGamesWon}
               </span>
             ) : null}
             <div className="hidden h-px w-8 bg-[rgba(29,96,66,0.18)] xl:block" />
@@ -301,12 +345,11 @@ export function LiveBracket({
             {mode === "admin" ? "Admin bracket" : "Live bracket"}
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
-            Fall 2026 playoff picture · Tournament Sunday, November 15
+            Fall 2026 playoff bracket · Sunday, November 15
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Teams qualify only if they have at least 1 win, at least 3 total games played, and no
-            more than 1 forfeit. Manual admin winner picks advance through the bracket everywhere
-            this view is shown.
+            Twelve division leaders and four wild cards qualify. Teams with more than one forfeit
+            are ineligible; completed scores determine qualification and the locked seed order.
           </p>
         </div>
         <div className="rounded-2xl bg-white/85 px-4 py-3 shadow-soft">
@@ -317,7 +360,7 @@ export function LiveBracket({
             {mode === "admin"
               ? bracket.currentChampion && isSeed(bracket.currentChampion)
                 ? `${bracket.currentChampion.teamName} is champion`
-                : `${bracket.field.length} teams currently in the field`
+                : `${bracket.field.length} of 16 teams in the field`
               : currentTeamSeed
                 ? `Projected Seed ${currentTeamSeed.seed}`
                 : "Outside the playoff field"}
@@ -381,7 +424,7 @@ export function LiveBracket({
               Qualified teams
             </p>
             <p className="mt-2 text-base font-semibold text-foreground">
-              Current 18-team playoff field
+              Current 16-team playoff field
             </p>
           </div>
           <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary">

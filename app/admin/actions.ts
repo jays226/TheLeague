@@ -16,23 +16,16 @@ import {
   getTeamById,
   getAdminSession,
   isAdminLoginRateLimited,
-  listLeagueGames,
-  listPlayoffGameResults,
-  listPlayoffSeedOverrides,
-  listTeamsWithReservations,
   moveTeamReservation,
   purgeExpiredAdminSessions,
   recordAdminLoginFailure,
   rejectReservation,
-  savePlayoffGameResult,
-  savePlayoffSeedOverrides,
   saveLeagueGameResult,
   setTeamWaitlistStatus,
   updateTeamByAdmin
 } from "@/lib/db";
 import { sendPaymentApprovedEmail } from "@/lib/email-notifications";
 import { env } from "@/lib/env";
-import { buildPlayoffBracket, generatePlayoffSeedsFromGames, resolvePlayoffField } from "@/lib/league-schedule";
 import {
   adminCookieName,
   adminSessionLifetimeSeconds,
@@ -248,15 +241,18 @@ export async function setTeamWaitlistAction(formData: FormData) {
 export async function saveGameResultAction(formData: FormData) {
   await requireAdmin();
 
-  const winnerTeamId = String(formData.get("winnerTeamId") || "").trim() || null;
+  const selectedWinnerTeamId = String(formData.get("winnerTeamId") || "").trim() || null;
   const rawHomeTeamWins = String(formData.get("homeTeamWins") || "").trim();
   const rawAwayTeamWins = String(formData.get("awayTeamWins") || "").trim();
   const homeTeamWins = rawHomeTeamWins ? Number(rawHomeTeamWins) : null;
   const awayTeamWins = rawAwayTeamWins ? Number(rawAwayTeamWins) : null;
-  const forfeitingTeamId = String(formData.get("forfeitingTeamId") || "").trim() || null;
+  const forfeitureChoice = String(formData.get("forfeitingTeamId") || "").trim();
+  const bothForfeited = forfeitureChoice === "both";
+  const forfeitingTeamId = bothForfeited ? null : forfeitureChoice || null;
   const homeTeamId = String(formData.get("homeTeamId") || "");
   const awayTeamId = String(formData.get("awayTeamId") || "");
-  const resultType = forfeitingTeamId ? "forfeit" : "standard";
+  const winnerTeamId = bothForfeited ? homeTeamId : selectedWinnerTeamId;
+  const resultType = bothForfeited ? "double_forfeit" : forfeitingTeamId ? "forfeit" : "standard";
   let gameScores: Array<{ home: number; away: number }> | null = null;
 
   if ((rawHomeTeamWins && !Number.isInteger(homeTeamWins)) || (rawAwayTeamWins && !Number.isInteger(awayTeamWins))) {
@@ -272,6 +268,7 @@ export async function saveGameResultAction(formData: FormData) {
   }
 
   if (
+    !bothForfeited &&
     winnerTeamId &&
     homeTeamWins !== null &&
     awayTeamWins !== null &&
@@ -284,7 +281,7 @@ export async function saveGameResultAction(formData: FormData) {
     throw new Error("Forfeiting team must be one of the scheduled teams.");
   }
 
-  if (!forfeitingTeamId && winnerTeamId) {
+  if (!bothForfeited && !forfeitingTeamId && winnerTeamId) {
     const rawGameScores = [1, 2, 3].map((index) => ({
       home: String(formData.get(`game${index}HomeScore`) ?? "").trim(),
       away: String(formData.get(`game${index}AwayScore`) ?? "").trim()
@@ -327,8 +324,8 @@ export async function saveGameResultAction(formData: FormData) {
     homeTeamId,
     awayTeamId,
     winnerTeamId,
-    homeTeamWins,
-    awayTeamWins,
+    homeTeamWins: bothForfeited ? 0 : homeTeamWins,
+    awayTeamWins: bothForfeited ? 0 : awayTeamWins,
     resultType,
     forfeitingTeamId: resultType === "forfeit" ? forfeitingTeamId : null,
     gameScores
@@ -338,111 +335,4 @@ export async function saveGameResultAction(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/dashboard");
   revalidatePath("/schedule");
-}
-
-export async function savePlayoffSeedsAction(formData: FormData) {
-  await requireAdmin();
-
-  const overrides: Array<{ seed: number; teamId: string }> = [];
-  const seenTeamIds = new Set<string>();
-
-  for (let seed = 1; seed <= 18; seed += 1) {
-    const teamId = String(formData.get(`seed-${seed}`) || "").trim();
-
-    if (!teamId) {
-      continue;
-    }
-
-    if (seenTeamIds.has(teamId)) {
-      redirect("/admin?playoffTone=error&playoffMessage=Each%20playoff%20team%20can%20only%20appear%20once.");
-    }
-
-    seenTeamIds.add(teamId);
-    overrides.push({ seed, teamId });
-  }
-
-  await savePlayoffSeedOverrides(overrides);
-
-  revalidatePath("/admin");
-  revalidatePath("/app");
-  revalidatePath("/app/dashboard");
-  redirect("/admin?playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20saved.");
-}
-
-export async function clearPlayoffSeedsAction() {
-  await requireAdmin();
-  await savePlayoffSeedOverrides([]);
-  revalidatePath("/admin");
-  revalidatePath("/app");
-  revalidatePath("/app/dashboard");
-  redirect("/admin?playoffTone=success&playoffMessage=Manual%20playoff%20bracket%20cleared.");
-}
-
-export async function savePlayoffGameResultAction(formData: FormData) {
-  await requireAdmin();
-
-  const matchupId = String(formData.get("matchupId") || "").trim();
-  const winnerTeamId = String(formData.get("winnerTeamId") || "").trim() || null;
-  const teams = await listTeamsWithReservations();
-  const leagueGames = await listLeagueGames();
-  const playoffSeeds = generatePlayoffSeedsFromGames(leagueGames);
-  const playoffSeedOverrides = await listPlayoffSeedOverrides();
-  const playoffGameResults = await listPlayoffGameResults();
-  const playoffField = resolvePlayoffField({
-    autoSeeds: playoffSeeds,
-    overrides: playoffSeedOverrides.map((override) => ({
-      seed: override.seed,
-      teamId: override.team_id
-    })),
-    teamContextById: new Map(
-      teams.map((team) => [
-        team.id,
-        {
-          teamId: team.id,
-          teamName: team.team_name,
-          slotId: team.active_slot_id,
-          slotLabel:
-            team.active_day_label && team.active_time_label
-              ? `${team.active_day_label} • ${team.active_time_label}`
-              : "No slot assigned"
-        }
-      ])
-    )
-  });
-  const bracket = buildPlayoffBracket({
-    qualifiedSeeds: playoffField,
-    results: playoffGameResults.map((result) => ({
-      matchupId: result.matchup_id,
-      winnerTeamId: result.winner_team_id
-    }))
-  });
-  const allMatchups = [
-    ...bracket.playInMatchups,
-    ...bracket.roundOf16Matchups,
-    ...bracket.quarterfinalMatchups,
-    ...bracket.semifinalMatchups,
-    ...bracket.finalMatchups
-  ];
-  const matchup = allMatchups.find((entry) => entry.id === matchupId);
-
-  if (!matchup) {
-    throw new Error("Unknown playoff matchup.");
-  }
-
-  const validTeamIds = [matchup.top, matchup.bottom]
-    .filter((entry): entry is typeof entry & { teamId: string } => "teamId" in entry)
-    .map((entry) => entry.teamId);
-
-  if (winnerTeamId && !validTeamIds.includes(winnerTeamId)) {
-    throw new Error("Winner must be one of the teams currently shown in that playoff matchup.");
-  }
-
-  await savePlayoffGameResult({
-    matchupId: matchup.id,
-    winnerTeamId
-  });
-
-  revalidatePath("/admin");
-  revalidatePath("/app");
-  revalidatePath("/app/dashboard");
 }
